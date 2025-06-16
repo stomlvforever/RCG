@@ -217,7 +217,9 @@ class GraphHead(nn.Module):
                 self.pin_attr_layers(batch.node_attr[pin_node_mask, 0].long())
             ## concatenate node embeddings and circuit statistics embeddings (C in EQ.6)
             x = torch.cat((x, node_attr_emb), dim=1)
-
+            # print(f"x:{x.shape}")
+            # assert 0
+            
         # GNN layers
         if self.model == 'gps_attention':
             batch.x = x
@@ -229,11 +231,15 @@ class GraphHead(nn.Module):
                 batch = layer(batch)  # GPSLayer 接收整个 batch
             x = batch.x  # 最后提取节点特征
         else:
-            x = batch.x
+            # x = x.float()
+
             for conv in self.layers:
                 if self.model == 'gine' or self.model == 'resgatedgcn':
                     x = conv(x, batch.edge_index, edge_attr=xe)
                 else:
+                    # print(f"x:{x.shape}") #[28650, 1]
+                    # print(f"edge_index:{batch.edge_index.shape}") #([2, 57994])
+                    # assert 0
                     x = conv(x, batch.edge_index)
 
                 if self.use_bn:
