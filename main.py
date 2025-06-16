@@ -14,11 +14,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="CircuitGCL")
     # Task setting
     parser.add_argument("--task_level", type=str, default="edge", help="Task level. 'node' or 'edge'.")
-    parser.add_argument("--task", type=str, default="classification", help="Task type. 'classification' or 'regression'.")
+    parser.add_argument("--task", type=str, default="regression", help="Task type. 'classification' or 'regression'.")
     
     # Dataset setting
     parser.add_argument("--dataset", type=str, default="ssram+digtime+timing_ctrl+array_128_32_8t", help="Names of datasets.") # the first dataset is the training dataset
-    parser.add_argument('--neg_edge_ratio',type=float,default=0.0,help='The ratio of negative edges.') # 0.0 for classification, 0.5 for regression
+    parser.add_argument('--neg_edge_ratio',type=float,default=0.5,help='The ratio of negative edges.') # 0.0 for classification, 0.5 for regression
     parser.add_argument('--net_only',type=bool,default=True,help='Only use net nodes for node level task or not.')
 
     # Graph sampling setting
@@ -102,29 +102,29 @@ if __name__ == "__main__":
 
     ##set log file
     
-    # create log file
-    if not os.path.exists(args.log_dir):
-        os.makedirs(args.log_dir, exist_ok=True)
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    if args.task == 'classification':
-        log_filename = os.path.join(args.log_dir, f"{timestamp}_{args.task_level}_{args.task}_{args.dataset}_loss{args.class_loss}_batch{args.batch_size}_{args.src_dst_agg}.txt")
-    else: # regression task
-        log_filename = os.path.join(args.log_dir, f"{timestamp}_{args.task_level}_{args.task}_{args.dataset}_loss{args.regress_loss}_batch{args.batch_size}_{args.src_dst_agg}.txt")
-    log_file = open(log_filename, 'w')
+    # # create log file
+    # if not os.path.exists(args.log_dir):
+    #     os.makedirs(args.log_dir, exist_ok=True)
+    # timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    # if args.task == 'classification':
+    #     log_filename = os.path.join(args.log_dir, f"{timestamp}_{args.task_level}_{args.task}_{args.dataset}_loss{args.class_loss}_batch{args.batch_size}_{args.src_dst_agg}.txt")
+    # else: # regression task
+    #     log_filename = os.path.join(args.log_dir, f"{timestamp}_{args.task_level}_{args.task}_{args.dataset}_loss{args.regress_loss}_batch{args.batch_size}_{args.src_dst_agg}.txt")
+    # log_file = open(log_filename, 'w')
     
-    # Redirect standard output to both file and console
-    class Tee(object):
-        def __init__(self, *files):
-            self.files = files
-        def write(self, obj):
-            for f in self.files:
-                f.write(obj)
-                f.flush()
-        def flush(self):
-            for f in self.files:
-                f.flush()
-    original_stdout = sys.stdout
-    sys.stdout = Tee(original_stdout, log_file)
+    # # Redirect standard output to both file and console
+    # class Tee(object):
+    #     def __init__(self, *files):
+    #         self.files = files
+    #     def write(self, obj):
+    #         for f in self.files:
+    #             f.write(obj)
+    #             f.flush()
+    #     def flush(self):
+    #         for f in self.files:
+    #             f.flush()
+    # original_stdout = sys.stdout
+    # sys.stdout = Tee(original_stdout, log_file)
 
 
     # Check cuda
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     # STEP 1: Load Dataset =================================================================== #
     dataset = performat_SramDataset(
         name=args.dataset, 
-        dataset_dir='./dataset/', 
+        dataset_dir='./datasets/', 
         neg_edge_ratio=args.neg_edge_ratio,
         to_undirected=True,
         small_dataset_sample_rates=args.small_dataset_sample_rates,
@@ -168,6 +168,6 @@ if __name__ == "__main__":
 
     downstream_train(args, dataset, device, cl_embeds)
 
-    sys.stdout = original_stdout
+    # sys.stdout = original_stdout
     log_file.close()
     print(f"Finished running and save results to {log_filename}")
