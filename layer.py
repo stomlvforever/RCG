@@ -163,13 +163,13 @@ class GatedGCNLayer(pyg_nn.conv.MessagePassing):
     
 class GCNConvLayer(nn.Module):
     
-    def __init__(self, dim_in, dim_out, dropout, residual, ffn):
+    def __init__(self, dim_in, dim_out, dropout, residual, ffn, batch_norm):
         super().__init__()
         self.dim_in = dim_in
         self.dim_out = dim_out
         self.dropout = dropout
         self.residual = residual
-        self.batch_norm = True
+        self.batch_norm = batch_norm
         self.ffn = ffn
         
         if self.batch_norm:
@@ -226,20 +226,21 @@ class GCNConvLayer(nn.Module):
 class GINEConvLayer(nn.Module):
     """Graph Isomorphism Network with Edge features (GINE) layer.
     """
-    def __init__(self, dim_in, dim_out, dropout, residual, ffn):
+    def __init__(self, dim_in, dim_out, dropout, residual, ffn, batch_norm):
         super().__init__()
         self.dim_in = dim_in
         self.dim_out = dim_out
         self.dropout = dropout
         self.residual = residual
-
+        self.batch_norm = batch_norm
+        self.ffn = ffn
+        
         gin_nn = nn.Sequential(
             pyg_nn.Linear(dim_in, dim_out), nn.ReLU(),
             pyg_nn.Linear(dim_out, dim_out))
         self.model = pyg_nn.GINEConv(gin_nn)
         
-        self.batch_norm = True
-        self.ffn = ffn
+
         
         if self.ffn:
             # Feed Forward block.
