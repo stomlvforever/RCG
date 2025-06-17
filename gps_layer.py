@@ -20,9 +20,9 @@ class GPSLayer(nn.Module):
     def __init__(self, hid_dim,
                  local_gnn_type, global_model_type, num_heads, act='relu',
                  pna_degrees=None, equivstable_pe=False, dropout=0.0,
-                 attn_dropout=0.0, layer_norm=False, batch_norm=True,
-                 log_attn_weights=False,
-                 res_linear=False):
+                 attn_dropout=0.0, layer_norm=False, batch_norm=True, g_bn=True,
+                 log_attn_weights=False, g_drop=0.0, g_ffn=True,
+                 res_linear=False, residual=False):
         super().__init__()
 
         self.hid_dim = hid_dim
@@ -32,8 +32,12 @@ class GPSLayer(nn.Module):
         self.batch_norm = batch_norm
         self.equivstable_pe = equivstable_pe
         self.activation = register.act_dict[act]
-
+        self.residual = residual
         self.log_attn_weights = log_attn_weights
+        self.g_bn = g_bn
+        self.g_drop = g_drop
+        self.g_ffn = g_ffn
+        
         if log_attn_weights and global_model_type not in ['Transformer',
                                                           'BiasedTransformer']:
             raise NotImplementedError(
@@ -94,22 +98,23 @@ class GPSLayer(nn.Module):
                                              divide_input=False)
         elif local_gnn_type == 'CustomGatedGCN':
             self.local_model = GatedGCNLayer(hid_dim, hid_dim,
-                                             dropout=dropout,
-                                             residual=True,
+                                             dropout=g_drop,
+                                             residual=residual,
                                              act=act,
                                              equivstable_pe=equivstable_pe)
         elif local_gnn_type == 'CustomGCNConv':
             self.local_model = GCNConvLayer(hid_dim, hid_dim,
-                                            dropout=dropout,
-                                            residual=True,
-                                            ffn=True,
-                                            batch_norm=batch_norm)
+                                            dropout=g_drop,
+                                            residual=residual,
+                                            ffn=g_ffn,
+                                            batch_norm=g_bn,
+                                            )
         elif local_gnn_type == 'CustomGINEConv':    
             self.local_model = GINEConvLayer(hid_dim, hid_dim,
-                                            dropout=dropout,
-                                            residual=True,
-                                            ffn=True,
-                                            batch_norm=batch_norm)   
+                                            dropout=g_drop,
+                                            residual=residual,
+                                            ffn=g_ffn,
+                                            batch_norm=g_bn)   
         else:
             raise ValueError(f"Unsupported local GNN model: {local_gnn_type}")
         self.local_gnn_type = local_gnn_type
