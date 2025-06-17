@@ -60,7 +60,12 @@ if __name__ == "__main__":
     parser.add_argument("--global_model_type", type=str, default='Transformer', choices=['Transformer' ,'BiasedTransformer'], help='Global attention mechanism settings')
     parser.add_argument("--local_gnn_type", type=str, default='CustomGatedGCN', choices=['GCN', 'GIN', 'GINE', 'GENConv', 'GAT', 'PNA', 'CustomGatedGCN', 'CustomGCNConv', 'CustomGINEConv'], help='The setting of the global attention GNN layer')
     parser.add_argument("--num_heads", type=int, default=2, help='The number of heads in multi-head attention')
-    parser.add_argument('--residual', type=int, default=1, help='Whether to use residuals in GNN+')
+    
+    ## gnn+ setting
+    parser.add_argument('--residual', type=bool, default=True, help='Whether to use residuals in GNN+')
+    parser.add_argument('--g_bn', type=bool, default=True, help='Whether to use bn in GNN+')
+    parser.add_argument('--g_drop', type=float, default=0.1, help='Whether to use bn in GNN+')
+    parser.add_argument('--g_ffn', type=bool, default=True, help='Whether to use bn in GNN+')
     
     ## Downstream GNN setting
     parser.add_argument("--model", type=str, default='gps_attention', choices=['clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'], help="The gnn model. Could be 'clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'.")
