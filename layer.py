@@ -15,7 +15,7 @@ class GatedGCNLayer(pyg_nn.conv.MessagePassing):
         Residual Gated Graph ConvNets
         https://arxiv.org/pdf/1711.07553.pdf
     """
-    def __init__(self, in_dim, out_dim, dropout, residual, act='relu',
+    def __init__(self, in_dim, out_dim, dropout, residual, ffn, batch_norm=True, act='relu',
                  equivstable_pe=False, **kwargs):
         super().__init__(**kwargs)
         self.activation = register.act_dict[act]
@@ -35,20 +35,40 @@ class GatedGCNLayer(pyg_nn.conv.MessagePassing):
                 nn.Linear(out_dim, 1),
                 nn.Sigmoid())
 
-        self.bn_node_x = nn.BatchNorm1d(out_dim)
-        self.bn_edge_e = nn.BatchNorm1d(out_dim)
         self.act_fn_x = self.activation()
         self.act_fn_e = self.activation()
         self.dropout = dropout
         self.residual = residual
         self.e = None
 
+        self.batch_norm = batch_norm
+        self.ffn = ffn
+        
+        if self.batch_norm:
+            self.bn_node_x = nn.BatchNorm1d(out_dim)
+            self.bn_edge_e = nn.BatchNorm1d(out_dim)
+            
+        if self.ffn:
+            # Feed Forward block.
+            if self.batch_norm:
+                self.norm1_local = nn.BatchNorm1d(out_dim)
+            self.ff_linear1 = nn.Linear(out_dim, out_dim*2)
+            self.ff_linear2 = nn.Linear(out_dim*2, out_dim)
+            self.act_fn_ff = register.act_dict[cfg.gnn.act]()
+            if self.batch_norm:
+                self.norm2 = nn.BatchNorm1d(out_dim)
+            self.ff_dropout1 = nn.Dropout(dropout)
+            self.ff_dropout2 = nn.Dropout(dropout)
+        
+
+    def _ff_block(self, x):
+        """Feed Forward block.
+        """
+        x = self.ff_dropout1(self.act_fn_ff(self.ff_linear1(x)))
+        # return x
+        return self.ff_dropout2(self.ff_linear2(x))
+
     def forward(self, batch):
-        batch.x = batch.x.float()
-        batch.edge_attr = batch.edge_attr.float()
-        # print("x", batch.x.size()) #([30672, 144])
-        # print("edge_attr",batch.edge_attr.size()) #([61880, 144])
-        # assert 0
         x, e, edge_index = batch.x, batch.edge_attr, batch.edge_index
 
         """
@@ -74,9 +94,9 @@ class GatedGCNLayer(pyg_nn.conv.MessagePassing):
                               Bx=Bx, Dx=Dx, Ex=Ex, Ce=Ce,
                               e=e, Ax=Ax,
                               PE=pe_LapPE)
-
-        x = self.bn_node_x(x)
-        e = self.bn_edge_e(e)
+        if self.batch_norm:
+            x = self.bn_node_x(x)
+            e = self.bn_edge_e(e)
 
         x = self.act_fn_x(x)
         e = self.act_fn_e(e)
@@ -90,6 +110,15 @@ class GatedGCNLayer(pyg_nn.conv.MessagePassing):
 
         batch.x = x
         batch.edge_attr = e
+        
+        if self.ffn:
+            if self.batch_norm:
+                batch.x = self.norm1_local(batch.x)
+            
+            batch.x = batch.x + self._ff_block(batch.x)
+
+            if self.batch_norm:
+                batch.x = self.norm2(batch.x)
 
         return batch
 
@@ -100,6 +129,7 @@ class GatedGCNLayer(pyg_nn.conv.MessagePassing):
         {}e             : [n_edges, out_dim]
         """
         e_ij = Dx_i + Ex_j + Ce
+        # e_ij = Dx_i + Ex_j
         sigma_ij = torch.sigmoid(e_ij)
 
         # Handling for Equivariant and Stable PE using LapPE
@@ -140,7 +170,6 @@ class GatedGCNLayer(pyg_nn.conv.MessagePassing):
         e_out = self.e
         del self.e
         return x, e_out
-
 
 # @register_layer('gatedgcnconv')
 # class GatedGCNGraphGymLayer(nn.Module):
