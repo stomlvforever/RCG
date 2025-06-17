@@ -100,7 +100,9 @@ class GPSLayer(nn.Module):
             self.local_model = GatedGCNLayer(hid_dim, hid_dim,
                                              dropout=g_drop,
                                              residual=residual,
+                                             ffn=g_ffn,
                                              act=act,
+                                             batch_norm=g_bn,
                                              equivstable_pe=equivstable_pe)
         elif local_gnn_type == 'CustomGCNConv':
             self.local_model = GCNConvLayer(hid_dim, hid_dim,
