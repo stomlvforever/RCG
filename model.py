@@ -49,6 +49,10 @@ class GraphHead(nn.Module):
         num_heads = args.num_heads
         dropout = args.dropout
         residual = args.residual
+        g_bn = args.g_bn
+        g_drop = args.g_drop
+        g_ffn = args.g_ffn
+        
         ## circuit statistics encoder + PE encoder + node&edge type encoders
         if args.use_stats + self.use_cl == 2:
             assert hidden_dim % 3 == 0, \
@@ -119,7 +123,10 @@ class GraphHead(nn.Module):
                                             attn_dropout=attn_dropout, 
                                             batch_norm=use_bn,
                                             num_heads=num_heads,
-                                            residual=residual
+                                            residual=residual,
+                                            g_bn=g_bn,
+                                            g_drop=g_drop,
+                                            g_ffn=g_ffn
                                             ))
             else:
                 raise ValueError(f'Unsupported GNN model: {args.model}')
