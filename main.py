@@ -17,7 +17,7 @@ if __name__ == "__main__":
     parser.add_argument("--task", type=str, default="regression", help="Task type. 'classification' or 'regression'.")
     
     # Dataset setting
-    parser.add_argument("--dataset", type=str, default="ssram+digtime+timing_ctrl+array_128_32_8t", help="Names of datasets.") # the first dataset is the training dataset
+    parser.add_argument("--dataset", type=str, default="ssram+digtime+timing_ctrl+array_128_32_8t+ultra8t+sandwich", help="Names of datasets.") # the first dataset is the training dataset
     parser.add_argument('--neg_edge_ratio',type=float,default=0.5,help='The ratio of negative edges.') # 0.0 for classification, 0.5 for regression
     parser.add_argument('--net_only',type=bool,default=True,help='Only use net nodes for node level task or not.')
 
@@ -33,8 +33,8 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int, default=8, help="The number of workers in data loaders.")
     parser.add_argument("--gpu", type=int, default=0, help="GPU index. Default: -1, using cpu.")
     parser.add_argument("--epochs", type=int, default=200, help="Training epochs.")
-    parser.add_argument("--batch_size", type=int, default=128, help="The batch size.")
-    parser.add_argument("--lr", type=float, default=0.0001, help="Learning rate.")
+    parser.add_argument("--batch_size", type=int, default=64, help="The batch size.")
+    parser.add_argument("--lr", type=float, default=0.00005, help="Learning rate.")
 
     # SGRL arguments
     parser.add_argument('--sgrl', type=int, default=0, help='Enable contrastive learning, i.e., SGRL.')
@@ -60,6 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("--global_model_type", type=str, default='Transformer', choices=['Transformer' ,'BiasedTransformer'], help='Global attention mechanism settings')
     parser.add_argument("--local_gnn_type", type=str, default='CustomGatedGCN', choices=['GCN', 'GIN', 'GINE', 'GENConv', 'GAT', 'PNA', 'CustomGatedGCN', 'CustomGCNConv', 'CustomGINEConv'], help='The setting of the global attention GNN layer')
     parser.add_argument("--num_heads", type=int, default=2, help='The number of heads in multi-head attention')
+    parser.add_argument('--residual', type=int, default=1, help='Whether to use residuals in GNN+')
     
     ## Downstream GNN setting
     parser.add_argument("--model", type=str, default='gps_attention', choices=['clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'], help="The gnn model. Could be 'clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'.")
@@ -67,7 +68,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_head_layers", type=int, default=2, help="Number of head layers.")
     parser.add_argument("--hid_dim", type=int, default=144, help="Hidden layer dim.")
     parser.add_argument('--dropout', type=float, default=0.3, help='Dropout for neural networks.')
-    parser.add_argument('--use_bn', type=int, default=1, help='0 or 1. Batch norm for neural networks.')
+    parser.add_argument('--use_bn', type=int, default=0, help='0 or 1. Batch norm for neural networks.')
     parser.add_argument('--act_fn', default='prelu', choices=['relu', 'elu', 'tanh', 'leakyrelu', 'prelu'], help='Activation function')
     parser.add_argument('--use_stats', type=int, default=1, help='0 or 1. Circuit statistics features. Use in node task.')
 
