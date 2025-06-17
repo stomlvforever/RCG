@@ -65,7 +65,7 @@ if __name__ == "__main__":
     parser.add_argument('--residual', type=bool, default=True, help='Whether to use residuals in GNN+')
     parser.add_argument('--g_bn', type=bool, default=True, help='Whether to use bn in GNN+')
     parser.add_argument('--g_drop', type=float, default=0.1, help='Whether to use bn in GNN+')
-    parser.add_argument('--g_ffn', type=bool, default=True, help='Whether to use bn in GNN+')
+    parser.add_argument('--g_ffn', type=bool, default=True, help='Whether to use ffn in GNN+')
     
     ## Downstream GNN setting
     parser.add_argument("--model", type=str, default='gps_attention', choices=['clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'], help="The gnn model. Could be 'clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'.")
