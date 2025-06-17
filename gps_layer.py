@@ -102,12 +102,14 @@ class GPSLayer(nn.Module):
             self.local_model = GCNConvLayer(hid_dim, hid_dim,
                                             dropout=dropout,
                                             residual=True,
-                                            ffn=True)
+                                            ffn=True,
+                                            batch_norm=batch_norm)
         elif local_gnn_type == 'CustomGINEConv':    
             self.local_model = GINEConvLayer(hid_dim, hid_dim,
                                             dropout=dropout,
                                             residual=True,
-                                            ffn=True)   
+                                            ffn=True,
+                                            batch_norm=batch_norm)   
         else:
             raise ValueError(f"Unsupported local GNN model: {local_gnn_type}")
         self.local_gnn_type = local_gnn_type
