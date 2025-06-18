@@ -52,6 +52,8 @@ class GraphHead(nn.Module):
         g_bn = args.g_bn
         g_drop = args.g_drop
         g_ffn = args.g_ffn
+        layer_norm = args.layer_norm
+        batch_norm = args.batch_norm
         
         ## circuit statistics encoder + PE encoder + node&edge type encoders
         if args.use_stats + self.use_cl == 2:
@@ -121,7 +123,8 @@ class GraphHead(nn.Module):
                                             global_model_type=global_model_type, 
                                             act=act_fn, 
                                             attn_dropout=attn_dropout, 
-                                            batch_norm=use_bn,
+                                            batch_norm=batch_norm,
+                                            layer_norm=layer_norm,
                                             num_heads=num_heads,
                                             residual=residual,
                                             g_bn=g_bn,
