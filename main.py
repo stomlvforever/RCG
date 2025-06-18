@@ -33,8 +33,8 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int, default=8, help="The number of workers in data loaders.")
     parser.add_argument("--gpu", type=int, default=0, help="GPU index. Default: -1, using cpu.")
     parser.add_argument("--epochs", type=int, default=200, help="Training epochs.")
-    parser.add_argument("--batch_size", type=int, default=64, help="The batch size.")
-    parser.add_argument("--lr", type=float, default=0.00005, help="Learning rate.")
+    parser.add_argument("--batch_size", type=int, default=128, help="The batch size.")
+    parser.add_argument("--lr", type=float, default=0.0001, help="Learning rate.")
 
     # SGRL arguments
     parser.add_argument('--sgrl', type=int, default=0, help='Enable contrastive learning, i.e., SGRL.')
@@ -57,11 +57,11 @@ if __name__ == "__main__":
     
     ## global attention setting
     parser.add_argument("--attn_dropout", type=float, default=0.7, help='Dropout for attentional networks')
-    parser.add_argument("--global_model_type", type=str, default='Transformer', choices=['Transformer' ,'BiasedTransformer', 'None'], help='Global attention mechanism settings')
+    parser.add_argument("--global_model_type", type=str, default='None', choices=['Transformer' ,'BiasedTransformer', 'None'], help='Global attention mechanism settings')
     parser.add_argument("--local_gnn_type", type=str, default='CustomGatedGCN', choices=['GCN', 'GIN', 'GINE', 'GENConv', 'GAT', 'PNA', 'CustomGatedGCN', 'CustomGCNConv', 'CustomGINEConv'], help='The setting of the global attention GNN layer')
     parser.add_argument("--num_heads", type=int, default=2, help='The number of heads in multi-head attention')
     parser.add_argument("--layer_norm", type=int, default=0, help='Whether to use layer_norm in GNN+, if you use the attention mechanism, layernorm and batchnorm cannot both be equal to 1.')
-    parser.add_argument("--batch_norm", type=int, default=0, help='Whether to use batch_norm in GNN+, if you use the attention mechanism, layernorm and batchnorm cannot both be equal to 1.')
+    parser.add_argument("--batch_norm", type=int, default=1, help='Whether to use batch_norm in GNN+, if you use the attention mechanism, layernorm and batchnorm cannot both be equal to 1.')
     
     ## gnn+ setting
     parser.add_argument('--residual', type=bool, default=True, help='Whether to use residuals in GNN+')
