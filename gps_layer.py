@@ -22,7 +22,7 @@ class GPSLayer(nn.Module):
                  pna_degrees=None, equivstable_pe=False, dropout=0.0,
                  attn_dropout=0.0, layer_norm=False, batch_norm=True, g_bn=True,
                  log_attn_weights=False, g_drop=0.0, g_ffn=True,
-                 res_linear=False, residual=False):
+                 res_linear=True, residual=False):
         super().__init__()
 
         self.hid_dim = hid_dim
