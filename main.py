@@ -14,7 +14,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="CircuitGCL")
     # Task setting
     parser.add_argument("--task_level", type=str, default="edge", help="Task level. 'node' or 'edge'.")
-    parser.add_argument("--task", type=str, default="regression", help="Task type. 'classification' or 'regression'.")
+    parser.add_argument("--task", type=str, default="classification", help="Task type. 'classification' or 'regression'.")
     
     # Dataset setting
     parser.add_argument("--dataset", type=str, default="ssram+digtime+timing_ctrl+array_128_32_8t+ultra8t+sandwich", help="Names of datasets.") # the first dataset is the training dataset
@@ -57,9 +57,11 @@ if __name__ == "__main__":
     
     ## global attention setting
     parser.add_argument("--attn_dropout", type=float, default=0.7, help='Dropout for attentional networks')
-    parser.add_argument("--global_model_type", type=str, default='Transformer', choices=['Transformer' ,'BiasedTransformer'], help='Global attention mechanism settings')
+    parser.add_argument("--global_model_type", type=str, default='Transformer', choices=['Transformer' ,'BiasedTransformer', 'None'], help='Global attention mechanism settings')
     parser.add_argument("--local_gnn_type", type=str, default='CustomGatedGCN', choices=['GCN', 'GIN', 'GINE', 'GENConv', 'GAT', 'PNA', 'CustomGatedGCN', 'CustomGCNConv', 'CustomGINEConv'], help='The setting of the global attention GNN layer')
     parser.add_argument("--num_heads", type=int, default=2, help='The number of heads in multi-head attention')
+    parser.add_argument("--layer_norm", type=int, default=0, help='Whether to use layer_norm in GNN+, if you use the attention mechanism, layernorm and batchnorm cannot both be equal to 1.')
+    parser.add_argument("--batch_norm", type=int, default=0, help='Whether to use batch_norm in GNN+, if you use the attention mechanism, layernorm and batchnorm cannot both be equal to 1.')
     
     ## gnn+ setting
     parser.add_argument('--residual', type=bool, default=True, help='Whether to use residuals in GNN+')
