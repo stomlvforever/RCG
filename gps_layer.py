@@ -188,7 +188,7 @@ class GPSLayer(nn.Module):
         # Local MPNN with edge attributes.
         if self.local_model is not None:
             self.local_model: pygnn.conv.MessagePassing  # Typing hint.
-            if self.local_gnn_type == 'CustomGatedGCN' or 'CustomGINEConv':
+            if self.local_gnn_type == 'CustomGatedGCN' or self.local_gnn_type == 'CustomGINEConv':
                 es_data = None
                 if self.equivstable_pe:
                     es_data = batch.pe_EquivStableLapPE
