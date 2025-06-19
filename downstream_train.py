@@ -443,7 +443,7 @@ def downstream_train(args, dataset, device, cl_embeds=None):
         
         # 1) 每过 30 个 epoch，把 lr 降为原来的一半
         
-        scheduler = StepLR(optimizer, step_size=40, gamma=0.5)
+        scheduler = StepLR(optimizer, step_size=40, gamma=0.5, last_epoch=160)
         # 或者，用监控 val loss 的方式：
         # scheduler = ReduceLROnPlateau(optimizer, mode='min',
         #                               factor=0.5, patience=5,
@@ -458,7 +458,7 @@ def downstream_train(args, dataset, device, cl_embeds=None):
         start = time.time()
         model = model.to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
-        scheduler = StepLR(optimizer, step_size=40, gamma=0.5)
+        scheduler = StepLR(optimizer, step_size=40, gamma=0.5, last_epoch=160)
         class_train(args, model, optimizer, train_loader, val_loader, test_loaders, max_label,
                     device, scheduler=scheduler)
     
