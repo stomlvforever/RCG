@@ -14,7 +14,7 @@ from sampling import dataset_sampling
 # from balanced_mse import GAILoss, BMCLoss, BNILoss, train_gmm, WeightedMSE, get_lds_weights, BalancedSoftmax, FocalLoss, compute_class_weights
 import os
 import matplotlib.pyplot as plt
-
+from torch.optim.lr_scheduler import StepLR
 # from torch.utils.data.sampler import SubsetRandomSampler
 # from sram_dataset import LinkPredictionDataset
 # from sram_dataset import collate_fn, adaption_for_sgrl
@@ -238,7 +238,9 @@ def regress_train(args, regressor, optimizier, criterion,
             args, val_loader, 
             regressor, device, split='val', criterion=criterion
         )
-
+        if scheduler is not None:
+            scheduler.step()
+            
         ## update the best results so far
         if best_results['best_val_mse'] > val_res['mse']:
             best_results['best_val_mse'] = val_res['mse']
@@ -356,7 +358,10 @@ def class_train(args, classifier,optimizer_classifier,
             classifier, device, split='val', criterion=criterion
         )
         #visualize_tsne(classifier, val_loader, device, num_samples=2000)
-
+        
+        if scheduler is not None:
+            scheduler.step()
+            
         ## ========== testing on other datasets ========== ##
         test_class_results = {}           
         eval_flag = False
@@ -436,17 +441,26 @@ def downstream_train(args, dataset, device, cl_embeds=None):
         model = model.to(device)
         optimizier = torch.optim.Adam(model.parameters(),lr=args.lr)
         
-        regress_train(args, model, optimizier, criterion,
-              train_loader, val_loader, test_loaders, max_label,
-              device)
+        # 1) 每过 30 个 epoch，把 lr 降为原来的一半
+        
+        scheduler = StepLR(optimizer, step_size=40, gamma=0.5)
+        # 或者，用监控 val loss 的方式：
+        # scheduler = ReduceLROnPlateau(optimizer, mode='min',
+        #                               factor=0.5, patience=5,
+        #                               min_lr=1e-6, verbose=True)
+
+        regress_train(args, model, optimizer, criterion,
+                      train_loader, val_loader, test_loaders, max_label,
+                      device, scheduler=scheduler)
         
     elif args.task == 'classification':
         model = GraphHead(args)
         start = time.time()
         model = model.to(device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
+        scheduler = StepLR(optimizer, step_size=40, gamma=0.5)
         class_train(args, model, optimizer, train_loader, val_loader, test_loaders, max_label,
-              device)
+                    device, scheduler=scheduler)
     
     else:
         raise ValueError(f"Task type {args.task} not supported!")
