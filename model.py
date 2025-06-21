@@ -54,6 +54,7 @@ class GraphHead(nn.Module):
         g_ffn = args.g_ffn
         layer_norm = args.layer_norm
         batch_norm = args.batch_norm
+        task_level = args.task_level
         
         ## circuit statistics encoder + PE encoder + node&edge type encoders
         if args.use_stats + self.use_cl == 2:
@@ -129,7 +130,8 @@ class GraphHead(nn.Module):
                                             residual=residual,
                                             g_bn=g_bn,
                                             g_drop=g_drop,
-                                            g_ffn=g_ffn
+                                            g_ffn=g_ffn,
+                                            task_level=task_level
                                             ))
             else:
                 raise ValueError(f'Unsupported GNN model: {args.model}')
@@ -239,6 +241,9 @@ class GraphHead(nn.Module):
             # print("edge_attr",batch.edge_attr.size()) #([61880, 144])
             # assert 0
             for layer in self.layers:
+                #batch.batch:Data(edge_index=[2, 17734], x=[11919, 144], y=[11919, 2], node_type=[11919], edge_type=[17734], name='ssram', node_attr=[11919, 17], tar_edge_dist=[3], n_id=[11919], e_id=[17734], num_sampled_nodes=[5], num_sampled_edges=[4], input_id=[128], batch_size=128, edge_attr=[17734, 144])
+                # print(f"batch:{batch}") 
+                # assert 0
                 batch = layer(batch)  # GPSLayer 接收整个 batch
             x = batch.x  # 最后提取节点特征
         else:
