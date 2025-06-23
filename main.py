@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     # Graph sampling setting
     parser.add_argument("--small_dataset_sample_rates", type=float, default=1.0, help="The sample rate for small dataset.")
-    parser.add_argument("--large_dataset_sample_rates", type=float, default=0.1, 
+    parser.add_argument("--large_dataset_sample_rates", type=float, default=0.01, 
                         help='Target edge num of large dataset. 20% for large G')
     parser.add_argument("--num_hops", type=int, default=4, help="Number of hops in subgraph sampling.")
     parser.add_argument('--num_neighbors',type=int,default=64,help='The number of neighbors in subgraph sampling.')
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     parser.add_argument("--gpu", type=int, default=0, help="GPU index. Default: -1, using cpu.")
     parser.add_argument("--epochs", type=int, default=200, help="Training epochs.")
     parser.add_argument("--batch_size", type=int, default=128, help="The batch size.")
-    parser.add_argument("--lr", type=float, default=0.0001, help="Learning rate.")
+    parser.add_argument("--lr", type=float, default=0.00008, help="Learning rate.")
 
     # SGRL arguments
     parser.add_argument('--sgrl', type=int, default=0, help='Enable contrastive learning, i.e., SGRL.')
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     ## gnn+ setting
     parser.add_argument('--residual', type=bool, default=True, help='Whether to use residuals in GNN+')
     parser.add_argument('--g_bn', type=bool, default=True, help='Whether to use bn in GNN+')
-    parser.add_argument('--g_drop', type=float, default=0.1, help='Whether to use bn in GNN+')
+    parser.add_argument('--g_drop', type=float, default=0.3, help='Whether to use bn in GNN+')
     parser.add_argument('--g_ffn', type=bool, default=True, help='Whether to use ffn in GNN+')
     
     ## Downstream GNN setting
