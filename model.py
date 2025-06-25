@@ -9,6 +9,7 @@ from torch_geometric.nn import (
 from torch_geometric.nn.models.mlp import MLP
 from torch_geometric.nn.aggr import AttentionalAggregation
 from gps_layer import GPSLayer
+from layer import GatedGCNLayer, GCNConvLayer, GINEConvLayer
 
 NET = 0
 DEV = 1
@@ -118,6 +119,29 @@ class GraphHead(nn.Module):
                     norm=None,
                 )
                 self.layers.append(GINEConv(mlp, train_eps=True, edge_dim=hidden_dim))
+            elif args.model == 'CustomGatedGCN':
+                self.layers.append(GatedGCNLayer(in_dim=hidden_dim, 
+                                                out_dim=hidden_dim,
+                                            dropout=g_drop,
+                                            residual=residual,
+                                            ffn=g_ffn,
+                                            batch_norm=g_bn,
+                                            ))
+            elif args.model == 'CustomGCNConv':
+                self.layers.append(GCNConvLayer(dim_in=hidden_dim, 
+                                                dim_out=hidden_dim,
+                                            dropout=g_drop,
+                                            residual=residual,
+                                            ffn=g_ffn,
+                                            batch_norm=g_bn,
+                                            ))
+            elif args.model == 'CustomGINEConv':
+                self.layers.append(GINEConvLayer(dim_in=hidden_dim, 
+                                                dim_out=hidden_dim,
+                                            dropout=g_drop,
+                                            residual=residual,
+                                            ffn=g_ffn,
+                                            batch_norm=g_bn))
             elif args.model == 'gps_attention':
                 self.layers.append(GPSLayer(hid_dim=hidden_dim, 
                                             local_gnn_type=local_gnn_type,
@@ -250,8 +274,13 @@ class GraphHead(nn.Module):
             # x = x.float()
 
             for conv in self.layers:
-                if self.model == 'gine' or self.model == 'resgatedgcn':
+                if self.model == 'gine' or self.model == 'resgatedgcn' :
                     x = conv(x, batch.edge_index, edge_attr=xe)
+                elif self.model == 'CustomGatedGCN' or self.model == 'CustomGCNConv' or self.model == 'CustomGINEConv':
+                    batch.x = x
+                    batch.edge_attr = xe
+                    batch = conv(batch)
+                    x = batch.x
                 else:
                     # print(f"x:{x.shape}") #[28650, 1]
                     # print(f"edge_index:{batch.edge_index.shape}") #([2, 57994])
