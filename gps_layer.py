@@ -235,10 +235,32 @@ class GPSLayer(nn.Module):
             # print(f"batch.batch:{batch.batch}")
             # assert 0
             if self.task_level == 'node':
+                # print(f"batch.y: {batch.y}")  # 打印所有节点的标签
+                # print(f"batch.y.shape: {batch.y.shape}")  # 打印标签的形状
+                # print(f"batch.n_id: {batch.n_id}")  # 节点ID
+                # print(f"batch.y[:, 0] (first column): {batch.y[:, 0][:10]}")  # 前10个节点的第一列标签
+                # print(f"batch.y[:, 1] (second column): {batch.y[:, 1][:10]}")  # 前10个节点的第二列标签
+                # assert 0
+                """
+                batch.y: tensor([[0., 0.],
+                [0., 0.],
+                [0., 0.],
+                ...,
+                [0., 0.],
+                [0., 0.],
+                [0., 0.]], device='cuda:0')
+                batch.y.shape: torch.Size([11981, 2])
+                batch.n_id: tensor([ 67781,  87182, 164202,  ..., 140238, 140242, 140246], device='cuda:0')
+                batch.y[:, 0] (first column): tensor([0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.6315,
+                0.0000], device='cuda:0')
+                batch.y[:, 1] (second column): tensor([0., 0., 0., 0., 0., 0., 0., 0., 3., 0.], device='cuda:0')
+                """
+                print()
                 sorted_idx = torch.arange(batch.num_nodes, device=h.device).sort()[1]
                 h_sorted = h[sorted_idx]
                 batch_sorted = torch.arange(batch.num_nodes, device=sorted_idx.device)[sorted_idx]
             elif self.task_level == 'edge':
+
                 sorted_idx = batch.batch.sort()[1]
                 h_sorted = h[sorted_idx]
                 batch_sorted = batch.batch[sorted_idx]
