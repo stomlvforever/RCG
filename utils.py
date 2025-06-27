@@ -205,35 +205,3 @@ def collated_data_separate(data: Data, slices, idx: int=None):
         data_list.append(copy.copy(separated_data))
     return data_list
 
-import torch
-
-def sanitize_batch_indices(batch_tensor: torch.Tensor, expected_len: int = None) -> torch.Tensor:
-    """
-    检查并修复 batch_tensor（例如 batch.batch）中的非法值：
-    - 确保是 int64 类型
-    - 确保全为非负整数
-    - 将 batch 编号重新编码为从 0 开始的连续整数
-    """
-    if expected_len is not None and batch_tensor.size(0) != expected_len:
-        raise ValueError(f"batch_tensor length {batch_tensor.size(0)} does not match expected {expected_len}")
-
-    if batch_tensor.dtype != torch.long:
-        print("[Warning] batch_tensor is not int64, casting to long.")
-        batch_tensor = batch_tensor.to(torch.long)
-
-    if (batch_tensor < 0).any():
-        min_val = batch_tensor.min().item()
-        raise ValueError(f"[Error] batch_tensor contains negative values: min={min_val}")
-
-    # 重新编号，使得 batch 从 0 开始连续编码（有些模型对此有要求）
-    unique_batches = batch_tensor.unique(sorted=True)
-    if not torch.equal(unique_batches, torch.arange(len(unique_batches), device=batch_tensor.device)):
-        print("[Info] Reindexing batch_tensor to consecutive values starting from 0.")
-        mapping = {old.item(): new for new, old in enumerate(unique_batches)}
-        batch_tensor = torch.tensor(
-            [mapping[b.item()] for b in batch_tensor.cpu()],
-            dtype=torch.long,
-            device=batch_tensor.device
-        )
-
-    return batch_tensor
