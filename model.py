@@ -119,29 +119,29 @@ class GraphHead(nn.Module):
                     norm=None,
                 )
                 self.layers.append(GINEConv(mlp, train_eps=True, edge_dim=hidden_dim))
-            elif args.model == 'CustomGatedGCN':
-                self.layers.append(GatedGCNLayer(in_dim=hidden_dim, 
-                                                out_dim=hidden_dim,
-                                            dropout=g_drop,
-                                            residual=residual,
-                                            ffn=g_ffn,
-                                            batch_norm=g_bn,
-                                            ))
-            elif args.model == 'CustomGCNConv':
-                self.layers.append(GCNConvLayer(dim_in=hidden_dim, 
-                                                dim_out=hidden_dim,
-                                            dropout=g_drop,
-                                            residual=residual,
-                                            ffn=g_ffn,
-                                            batch_norm=g_bn,
-                                            ))
-            elif args.model == 'CustomGINEConv':
-                self.layers.append(GINEConvLayer(dim_in=hidden_dim, 
-                                                dim_out=hidden_dim,
-                                            dropout=g_drop,
-                                            residual=residual,
-                                            ffn=g_ffn,
-                                            batch_norm=g_bn))
+            # elif args.model == 'CustomGatedGCN':
+            #     self.layers.append(GatedGCNLayer(in_dim=hidden_dim, 
+            #                                     out_dim=hidden_dim,
+            #                                 dropout=g_drop,
+            #                                 residual=residual,
+            #                                 ffn=g_ffn,
+            #                                 batch_norm=g_bn,
+            #                                 ))
+            # elif args.model == 'CustomGCNConv':
+            #     self.layers.append(GCNConvLayer(dim_in=hidden_dim, 
+            #                                     dim_out=hidden_dim,
+            #                                 dropout=g_drop,
+            #                                 residual=residual,
+            #                                 ffn=g_ffn,
+            #                                 batch_norm=g_bn,
+            #                                 ))
+            # elif args.model == 'CustomGINEConv':
+            #     self.layers.append(GINEConvLayer(dim_in=hidden_dim, 
+            #                                     dim_out=hidden_dim,
+            #                                 dropout=g_drop,
+            #                                 residual=residual,
+            #                                 ffn=g_ffn,
+            #                                 batch_norm=g_bn))
             elif args.model == 'gps_attention':
                 self.layers.append(GPSLayer(hid_dim=hidden_dim, 
                                             local_gnn_type=local_gnn_type,
