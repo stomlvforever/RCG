@@ -436,6 +436,7 @@ def downstream_train(args, dataset, device, cl_embeds=None):
         #     raise ValueError(f"Loss func {args.regress_loss} not supported!")
         criterion = torch.nn.MSELoss(reduction='mean')
         
+        
         start = time.time()
         model = GraphHead(args)
         model = model.to(device)
