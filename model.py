@@ -9,7 +9,7 @@ from torch_geometric.nn import (
 from torch_geometric.nn.models.mlp import MLP
 from torch_geometric.nn.aggr import AttentionalAggregation
 from gps_layer import GPSLayer
-from layer import GatedGCNLayer, GCNConvLayer, GINEConvLayer
+
 
 NET = 0
 DEV = 1
@@ -224,6 +224,12 @@ class GraphHead(nn.Module):
 
 
     def forward(self, batch):
+        # print(f"batch.y: {batch.y}")  # 打印所有节点的标签
+        # print(f"batch.y.shape: {batch.y.shape}")  # 打印标签的形状
+        # print(f"batch.n_id: {batch.n_id}")  # 节点ID
+        # print(f"batch.y[:, 0] (first column): {batch.y[:, 0][:10]}")  # 前10个节点的第一列标签
+        # print(f"batch.y[:, 1] (second column): {batch.y[:, 1][:10]}")  # 前10个节点的第二列标签
+        # assert 0
         ## Node type / Edge type encoding
         x = self.node_encoder(batch.node_type)
         xe = self.edge_encoder(batch.edge_type)
@@ -294,7 +300,7 @@ class GraphHead(nn.Module):
                 if self.drop_out > 0.0:
                     x = F.dropout(x, p=self.drop_out, training=self.training)
 
-            batch.x = x  # 如果后面还要用 batch
+            # batch.x = x  # 如果后面还要用 batch
 
 
         ## task level : node
@@ -309,8 +315,11 @@ class GraphHead(nn.Module):
                 true_class = batch.y[:, 1].long()
                 true_label = batch.y
 
+            
         elif self.task_level == 'edge':
-            if self.src_dst_agg in ['pooladd', 'poolmean', 'globalattn']:
+            # if self.src_dst_agg in ['pooladd', 'poolmean', 'globalattn']:
+            #     graph_emb = self.pooling_fun(x, batch.batch)
+            if self.src_dst_agg[:4] == 'pool':
                 graph_emb = self.pooling_fun(x, batch.batch)
             else:
                 batch_size = batch.edge_label.size(0)
