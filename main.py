@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # Dataset setting
     parser.add_argument("--dataset", type=str, default="ssram+digtime+timing_ctrl+array_128_32_8t+ultra8t+sandwich", help="Names of datasets.") # the first dataset is the training dataset
     parser.add_argument('--neg_edge_ratio',type=float,default=0.5,help='The ratio of negative edges.') # 0.0 for classification, 0.5 for regression
-    parser.add_argument('--net_only',type=bool,default=True,help='Only use net nodes for node level task or not.')
+    parser.add_argument('--net_only',type=bool,default=False,help='Only use net nodes for node level task or not.')
 
     # Graph sampling setting
     parser.add_argument("--small_dataset_sample_rates", type=float, default=1.0, help="The sample rate for small dataset.")
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     parser.add_argument("--gpu", type=int, default=0, help="GPU index. Default: -1, using cpu.")
     parser.add_argument("--epochs", type=int, default=200, help="Training epochs.")
     parser.add_argument("--batch_size", type=int, default=128, help="The batch size.")
-    parser.add_argument("--lr", type=float, default=0.00008, help="Learning rate.")
+    parser.add_argument("--lr", type=float, default=0.0001, help="Learning rate.")
 
     # SGRL arguments
     parser.add_argument('--sgrl', type=int, default=0, help='Enable contrastive learning, i.e., SGRL.')
@@ -70,11 +70,11 @@ if __name__ == "__main__":
     parser.add_argument('--g_ffn', type=bool, default=True, help='Whether to use ffn in GNN+')
     
     ## Downstream GNN setting
-    parser.add_argument("--model", type=str, default='gps_attention', choices=['clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'], help="The gnn model. Could be 'clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'.")
+    parser.add_argument("--model", type=str, default='sage', choices=['clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'CustomGINEConv', 'CustomGCNConv', 'CustomGatedGCN', 'gps_attention'], help="The gnn model. Could be 'clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'.")
     parser.add_argument("--num_gnn_layers", type=int, default=4, help="Number of GNN layers.")
     parser.add_argument("--num_head_layers", type=int, default=2, help="Number of head layers.")
     parser.add_argument("--hid_dim", type=int, default=144, help="Hidden layer dim.")
-    parser.add_argument('--dropout', type=float, default=0.3, help='Dropout for neural networks.')
+    parser.add_argument('--dropout', type=float, default=0.1, help='Dropout for neural networks.')
     parser.add_argument('--use_bn', type=int, default=0, help='0 or 1. Batch norm for neural networks.')
     parser.add_argument('--act_fn', default='prelu', choices=['relu', 'elu', 'tanh', 'leakyrelu', 'prelu'], help='Activation function')
     parser.add_argument('--use_stats', type=int, default=1, help='0 or 1. Circuit statistics features. Use in node task.')
@@ -108,9 +108,9 @@ if __name__ == "__main__":
     torch.cuda.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
 
-    ##set log file
+    #set log file
     
-    # # create log file
+    # create log file
     # if not os.path.exists(args.log_dir):
     #     os.makedirs(args.log_dir, exist_ok=True)
     # timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -177,5 +177,5 @@ if __name__ == "__main__":
     downstream_train(args, dataset, device, cl_embeds)
 
     # sys.stdout = original_stdout
-    log_file.close()
+    # log_file.close()
     print(f"Finished running and save results to {log_filename}")
