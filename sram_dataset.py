@@ -22,8 +22,8 @@ class SealSramDataset(InMemoryDataset):
         neg_edge_ratio=1.0,
         to_undirected=True,
         sample_rates=[1.0], 
-        task_level='edge',
-        net_only=True,
+        task_level='node',
+        net_only=False,
         transform=None, 
         pre_transform=None,
         class_boundaries=[0.2, 0.4, 0.6, 0.8]
@@ -108,7 +108,6 @@ class SealSramDataset(InMemoryDataset):
             self.data, self.slices = self.collate(self._data_list)
             self._data_list = None
 
-
         # normalize the node features
         for ntype in ntypes:
             node_mask = self._data.node_type == ntype
@@ -125,12 +124,36 @@ class SealSramDataset(InMemoryDataset):
             self._data.edge_label[self._data.edge_label < 0] = 0.0
             self._data.edge_label[self._data.edge_label > 1] = 1.0
             edge_label_c = torch.bucketize(self._data.edge_label, self.class_boundaries)
+            # print("="*50)
+            # print("边标签分布分析:")
+            # print(f"总边标签数量: {len(self._data.edge_label)}")
+            
+            # # Count values in each range
+            # range_0_02 = ((self._data.edge_label >= 0.0) & (self._data.edge_label < 0.2)).sum().item()
+            # range_02_04 = ((self._data.edge_label >= 0.2) & (self._data.edge_label < 0.4)).sum().item()
+            # range_04_06 = ((self._data.edge_label >= 0.4) & (self._data.edge_label < 0.6)).sum().item()
+            # range_06_08 = ((self._data.edge_label >= 0.6) & (self._data.edge_label < 0.8)).sum().item()
+            # range_08_1 = ((self._data.edge_label >= 0.8) & (self._data.edge_label <= 1.0)).sum().item()
+                    
+            # # Verify total count
+            # total_counted = range_0_02 + range_02_04 + range_04_06 + range_06_08 + range_08_1
+            # print(f"统计总数: {total_counted} (应该匹配总数: {len(self._data.edge_label)})")
+            # print("="*50)
+            
+            # edge_label_c = torch.bucketize(self._data.edge_label, self.class_boundaries)
+            
+            # # Also print the class distribution after bucketizing
+            # print("分桶后的类别分布:")
+            # unique_classes, class_counts = torch.unique(edge_label_c, return_counts=True)
+            # for i, (cls, count) in enumerate(zip(unique_classes, class_counts)):
+            #     percentage = count.item() / len(edge_label_c) * 100
+            #     print(f"类别 {cls.item()}: {count.item()} 样本 ({percentage:.2f}%)")
+            # print("="*50)
+            # assert 0
             self._data.edge_label = torch.stack(
                 [self._data.edge_label, edge_label_c], dim=1
             )
             self._data_list = None
-          
-
 
         elif self.task_level == 'node':
             ## normalize the node label i.e., lumped ground capacitance
@@ -138,14 +161,88 @@ class SealSramDataset(InMemoryDataset):
             self._data.y[self._data.y < 0] = 0.0
             self._data.y[self._data.y > 1] = 1.0
             node_label_c = torch.bucketize(self._data.y, self.class_boundaries)
+            # print("="*50)
+            # print("节点标签分布分析:")
+            # print(f"总节点标签数量: {len(self._data.y)}")
+            
+            # # 定义节点类型名称映射
+            # node_type_names = {0: 'NET', 1: 'DEV', 2: 'PIN'}
+            
+            # # 获取所有节点类型
+            # unique_node_types = torch.unique(self._data.node_type)
+            # # print(f"unique_node_types{unique_node_types}")
+            # # assert 0
+            # # 分析每种节点类型的标签分布
+            # for node_type in unique_node_types:
+            #     node_type_mask = self._data.node_type == node_type
+            #     node_type_name = node_type_names.get(node_type.item(), f'类型{node_type.item()}')
+                
+            #     print(f"\n{node_type_name}节点 (类型 {node_type.item()}):")
+            #     print(f"  节点数量: {node_type_mask.sum().item()}")
+                
+            #     # 当前节点类型的标签
+            #     node_type_labels = self._data.y[node_type_mask]
+                
+            #     if len(node_type_labels) > 0:
+            #         # 计算每个范围内的样本数
+            #         range_0_02 = ((node_type_labels >= 0.0) & (node_type_labels < 0.2)).sum().item()
+            #         range_02_04 = ((node_type_labels >= 0.2) & (node_type_labels < 0.4)).sum().item()
+            #         range_04_06 = ((node_type_labels >= 0.4) & (node_type_labels < 0.6)).sum().item()
+            #         range_06_08 = ((node_type_labels >= 0.6) & (node_type_labels < 0.8)).sum().item()
+            #         range_08_1 = ((node_type_labels >= 0.8) & (node_type_labels <= 1.0)).sum().item()
+                    
+            #         total_node_type = len(node_type_labels)
+            #         print(f"  范围 [0.0, 0.2): {range_0_02} 样本 ({range_0_02/total_node_type*100:.2f}%)")
+            #         print(f"  范围 [0.2, 0.4): {range_02_04} 样本 ({range_02_04/total_node_type*100:.2f}%)")
+            #         print(f"  范围 [0.4, 0.6): {range_04_06} 样本 ({range_04_06/total_node_type*100:.2f}%)")
+            #         print(f"  范围 [0.6, 0.8): {range_06_08} 样本 ({range_06_08/total_node_type*100:.2f}%)")
+            #         print(f"  范围 [0.8, 1.0]: {range_08_1} 样本 ({range_08_1/total_node_type*100:.2f}%)")
+                    
+            #         # 验证总数
+            #         total_counted = range_0_02 + range_02_04 + range_04_06 + range_06_08 + range_08_1
+            #         print(f"  统计总数: {total_counted} (应该匹配: {total_node_type})")
+                    
+            #         # 分桶后的类别分布
+            #         node_type_classes = torch.bucketize(node_type_labels, self.class_boundaries)
+            #         unique_classes, class_counts = torch.unique(node_type_classes, return_counts=True)
+            #         print(f"  分桶后的类别分布:")
+            #         for cls, count in zip(unique_classes, class_counts):
+            #             percentage = count.item() / len(node_type_classes) * 100
+            #             print(f"    类别 {cls.item()}: {count.item()} 样本 ({percentage:.2f}%)")
+            
+            # # 总体分布
+            # print(f"\n总体分布:")
+            # range_0_02 = ((self._data.y >= 0.0) & (self._data.y < 0.2)).sum().item()
+            # range_02_04 = ((self._data.y >= 0.2) & (self._data.y < 0.4)).sum().item()
+            # range_04_06 = ((self._data.y >= 0.4) & (self._data.y < 0.6)).sum().item()
+            # range_06_08 = ((self._data.y >= 0.6) & (self._data.y < 0.8)).sum().item()
+            # range_08_1 = ((self._data.y >= 0.8) & (self._data.y <= 1.0)).sum().item()
+            
+            # total_nodes = len(self._data.y)
+            # print(f"范围 [0.0, 0.2): {range_0_02} 样本 ({range_0_02/total_nodes*100:.2f}%)")
+            # print(f"范围 [0.2, 0.4): {range_02_04} 样本 ({range_02_04/total_nodes*100:.2f}%)")
+            # print(f"范围 [0.4, 0.6): {range_04_06} 样本 ({range_04_06/total_nodes*100:.2f}%)")
+            # print(f"范围 [0.6, 0.8): {range_06_08} 样本 ({range_06_08/total_nodes*100:.2f}%)")
+            # print(f"范围 [0.8, 1.0]: {range_08_1} 样本 ({range_08_1/total_nodes*100:.2f}%)")
+            
+            # # 验证总数
+            # total_counted = range_0_02 + range_02_04 + range_04_06 + range_06_08 + range_08_1
+            # print(f"统计总数: {total_counted} (应该匹配总数: {total_nodes})")
+            
+            # # 总体分桶后的类别分布
+            # print("总体分桶后的类别分布:")
+            # unique_classes, class_counts = torch.unique(node_label_c, return_counts=True)
+            # for i, (cls, count) in enumerate(zip(unique_classes, class_counts)):
+            #     percentage = count.item() / len(node_label_c) * 100
+            #     print(f"类别 {cls.item()}: {count.item()} 样本 ({percentage:.2f}%)")
+            # print("="*50)
+            # assert 0
+            
             self._data.y = torch.stack(
                 [self._data.y, node_label_c], dim=1
             )
             print("self._data.y", self._data.y)
             self._data_list = None
-
-       
-           
 
     def set_cl_embeds(self, embeds):
         """
@@ -178,6 +275,8 @@ class SealSramDataset(InMemoryDataset):
         Returns:
             g (torch_geometric.data.Data): The processed homo graph data.
         """
+        # print(f"name:{name}")
+        # assert 0
         logging.info(f"raw_path: {raw_path}")
         hg = torch.load(raw_path)
         if isinstance(hg, list):
@@ -203,6 +302,17 @@ class SealSramDataset(InMemoryDataset):
             power_net_ids = torch.tensor([0, 1])
         elif name == "array_128_32_8t":
             power_net_ids = torch.tensor([0, 1])
+        
+        # ===== 添加调试打印：查看原始异构图的节点类型 =====
+        print(f"原始异构图的节点类型: {hg.node_types}")
+        for ntype in hg.node_types:
+            print(f"节点类型 '{ntype}': 数量 = {hg[ntype].num_nodes}")
+            if hasattr(hg[ntype], 'x'):
+                print(f"  特征维度: {hg[ntype].x.shape}")
+            if hasattr(hg[ntype], 'y'):
+                print(f"  标签维度: {hg[ntype].y.shape}")
+                print(f"  标签范围: [{hg[ntype].y.min():.2e}, {hg[ntype].y.max():.2e}]")
+        print("=" * 50)
         
         """ graph transform """ 
         ### remove the power pins
@@ -246,6 +356,16 @@ class SealSramDataset(InMemoryDataset):
             node_feat.append(feat)
             tar_node_y.append(hg[ntype].y)
         
+        # ===== 添加调试打印：查看节点类型映射 =====
+        print(f"节点类型到整数的映射 g._n2type: {g._n2type}")
+        print(f"同构图总节点数: {g.num_nodes}")
+        print(f"同构图节点类型分布:")
+        for ntype, type_id in g._n2type.items():
+            mask = g.node_type == type_id
+            count = mask.sum().item()
+            print(f"  {ntype} (type_id={type_id}): {count} 个节点")
+        print("=" * 50)
+        
         ## There is 'node_type' attribute after transforming hg to g.
         ## The 'node_type' is used as default node feature, g.x.
         g.x = g.node_type.view(-1, 1)
@@ -258,13 +378,46 @@ class SealSramDataset(InMemoryDataset):
                 g.tar_node_y = torch.zeros((g.num_nodes, 1)) 
                 net_nodes = torch.where(net_mask)[0]
                 g.tar_node_y[net_nodes] = hg['net'].y  # assign the ground capacitance value to the net nodes
+                
+                # ===== 添加调试打印：仅net节点的标签 =====
+                print(f"仅处理net节点模式:")
+                print(f"  net节点数量: {net_nodes.shape[0]}")
+                print(f"  net节点标签范围: [{g.tar_node_y[net_nodes].min():.2e}, {g.tar_node_y[net_nodes].max():.2e}]")
+                
             else:
                 ## lumped ground capacitance on net/pin nodes
                 g.tar_node_y = torch.cat(tar_node_y, dim=0)
+                
+                # ===== 添加调试打印：所有节点的标签 =====
+                print(f"处理所有节点模式:")
+                print(f"  总标签数量: {g.tar_node_y.shape[0]}")
+                print(f"  总标签范围: [{g.tar_node_y.min():.2e}, {g.tar_node_y.max():.2e}]")
+                
+                # 分别打印每种节点类型的标签统计
+                start_idx = 0
+                for ntype in hg.node_types:
+                    type_id = g._n2type[ntype]
+                    mask = g.node_type == type_id
+                    nodes_of_type = torch.where(mask)[0]
+                    if len(nodes_of_type) > 0:
+                        labels_of_type = g.tar_node_y[nodes_of_type]
+                        print(f"  {ntype} 节点标签:")
+                        print(f"    数量: {len(nodes_of_type)}")
+                        print(f"    范围: [{labels_of_type.min():.2e}, {labels_of_type.max():.2e}]")
+                        print(f"    均值: {labels_of_type.mean():.2e}")
+                        print(f"    标准差: {labels_of_type.std():.2e}")
+                        
+                        # 显示标签分布的直方图信息
+                        unique_labels, counts = labels_of_type.unique(return_counts=True)
+                        print(f"    唯一标签数: {len(unique_labels)}")
+                        if len(unique_labels) <= 10:
+                            print(f"    标签分布: {dict(zip(unique_labels.tolist(), counts.tolist()))}")
+                        else:
+                            print(f"    前5个最常见标签: {dict(zip(unique_labels[:5].tolist(), counts[:5].tolist()))}")
+            
+            print("=" * 50)
             g.y = g.tar_node_y
         
-
-       
         g._e2type = {}
 
         for e, (edge, store) in enumerate(hg.edge_items()):
@@ -319,6 +472,18 @@ class SealSramDataset(InMemoryDataset):
                 g.edge_index, g.edge_type = to_undirected(
                     g.edge_index, g.edge_type, g.num_nodes, reduce='mean'
                 )
+        
+        # ===== 最终调试打印：总结信息 =====
+        print(f"最终处理结果:")
+        print(f"  图名称: {g.name}")
+        print(f"  总节点数: {g.num_nodes}")
+        print(f"  总边数: {g.edge_index.shape[1]}")
+        print(f"  目标边数: {g.tar_edge_index.shape[1]}")
+        print(f"  节点特征维度: {g.x.shape}")
+        print(f"  节点属性维度: {g.node_attr.shape}")
+        if hasattr(g, 'y'):
+            print(f"  节点标签维度: {g.y.shape}")
+        print("=" * 50)
         
         return g
 
