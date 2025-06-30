@@ -57,7 +57,7 @@ if __name__ == "__main__":
     
     ## global attention setting
     parser.add_argument("--attn_dropout", type=float, default=0.7, help='Dropout for attentional networks')
-    parser.add_argument("--global_model_type", type=str, default='None', choices=['Transformer' ,'BiasedTransformer', 'None'], help='Global attention mechanism settings')
+    parser.add_argument("--global_model_type", type=str, default='Transformer', choices=['Transformer' ,'BiasedTransformer', 'None'], help='Global attention mechanism settings')
     parser.add_argument("--local_gnn_type", type=str, default='CustomGatedGCN', choices=['GCN', 'GIN', 'GINE', 'GENConv', 'GAT', 'PNA', 'CustomGatedGCN', 'CustomGCNConv', 'CustomGINEConv'], help='The setting of the global attention GNN layer')
     parser.add_argument("--num_heads", type=int, default=2, help='The number of heads in multi-head attention')
     parser.add_argument("--layer_norm", type=int, default=0, help='Whether to use layer_norm in GNN+, if you use the attention mechanism, layernorm and batchnorm cannot both be equal to 1.')
@@ -70,11 +70,11 @@ if __name__ == "__main__":
     parser.add_argument('--g_ffn', type=bool, default=True, help='Whether to use ffn in GNN+')
     
     ## Downstream GNN setting
-    parser.add_argument("--model", type=str, default='sage', choices=['clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'CustomGINEConv', 'CustomGCNConv', 'CustomGatedGCN', 'gps_attention'], help="The gnn model. Could be 'clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'.")
+    parser.add_argument("--model", type=str, default='sage', choices=['clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'], help="The gnn model. Could be 'clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'.")
     parser.add_argument("--num_gnn_layers", type=int, default=4, help="Number of GNN layers.")
     parser.add_argument("--num_head_layers", type=int, default=2, help="Number of head layers.")
     parser.add_argument("--hid_dim", type=int, default=144, help="Hidden layer dim.")
-    parser.add_argument('--dropout', type=float, default=0.1, help='Dropout for neural networks.')
+    parser.add_argument('--dropout', type=float, default=0.3, help='Dropout for neural networks.')
     parser.add_argument('--use_bn', type=int, default=0, help='0 or 1. Batch norm for neural networks.')
     parser.add_argument('--act_fn', default='prelu', choices=['relu', 'elu', 'tanh', 'leakyrelu', 'prelu'], help='Activation function')
     parser.add_argument('--use_stats', type=int, default=1, help='0 or 1. Circuit statistics features. Use in node task.')
