@@ -235,11 +235,19 @@ class GPSLayer(nn.Module):
             # print(f"batch.batch:{batch.batch}")
             # assert 0
             if self.task_level == 'node':
-                # print(f"batch.y: {batch.y}")  # 打印所有节点的标签
-                # print(f"batch.y.shape: {batch.y.shape}")  # 打印标签的形状
-                # print(f"batch.n_id: {batch.n_id}")  # 节点ID
-                # print(f"batch.y[:, 0] (first column): {batch.y[:, 0][:10]}")  # 前10个节点的第一列标签
-                # print(f"batch.y[:, 1] (second column): {batch.y[:, 1][:10]}")  # 前10个节点的第二列标签
+                # print(f"batch.y unique values: {batch.y}")
+                # print(f"batch.y[:, 0] unique: {batch.y[:, 0]}")
+                # print(f"batch.y[:, 1] unique: {batch.y[:, 1]}")
+                
+                # # 检查节点类型分布
+                # print(f"batch.node_type unique: {batch.node_type}")
+                # print(f"node_type distribution: {batch.node_type}")
+                
+                # # 如果你怀疑是采样问题，可以检查原始图中的标签分布
+                
+                # print(f"batch.n_id range: min={batch.n_id.min()}, max={batch.n_id.max()}")
+                # # 检查是否所有batch都是这样
+                # print(f"Current batch info: batch_size={getattr(batch, 'batch_size', 'unknown')}")
                 # assert 0
                 """
                 batch.y: tensor([[0., 0.],
@@ -255,7 +263,7 @@ class GPSLayer(nn.Module):
                 0.0000], device='cuda:0')
                 batch.y[:, 1] (second column): tensor([0., 0., 0., 0., 0., 0., 0., 0., 3., 0.], device='cuda:0')
                 """
-                print()
+                
                 sorted_idx = torch.arange(batch.num_nodes, device=h.device).sort()[1]
                 h_sorted = h[sorted_idx]
                 batch_sorted = torch.arange(batch.num_nodes, device=sorted_idx.device)[sorted_idx]
