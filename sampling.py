@@ -27,6 +27,7 @@ def dataset_sampling(args, dataset):
     ## default training data come from the first dataset
     graph_idx = 0
     train_graph = dataset[graph_idx]
+    # print(f"train_graph.y:{train_graph.y}")
     if args.task_level == 'node':
         if args.net_only:
             mask = train_graph.node_type == NET 
@@ -34,8 +35,12 @@ def dataset_sampling(args, dataset):
         else:
             class_labels = train_graph.y[:, 1]
         # get all node indices
+        # valid_mask = (train_graph.y[:, 0] > 1e-30)  # 假设第一列是原始值
+        # valid_nodes = np.where(valid_mask)[0]
+        # train_node_ind, val_node_ind = train_test_split(valid_nodes, test_size=0.2)
         all_nodes = np.arange(train_graph.y.size(0))
-                
+        # print(f"train_graph.y:{train_graph.y},train_graph.y[:, 0]:{train_graph.y[:, 0]}")
+        # assert 0       
         # split training and validation set
         train_node_ind, val_node_ind = train_test_split(
             all_nodes, test_size=0.2, shuffle=True
