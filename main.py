@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # Dataset setting
     parser.add_argument("--dataset", type=str, default="ssram+digtime+timing_ctrl+array_128_32_8t+ultra8t+sandwich", help="Names of datasets.") # the first dataset is the training dataset
     parser.add_argument('--neg_edge_ratio',type=float,default=0.5,help='The ratio of negative edges.') # 0.0 for classification, 0.5 for regression
-    parser.add_argument('--net_only',type=bool,default=False,help='Only use net nodes for node level task or not.')
+    parser.add_argument('--net_only',type=int,default=0,help='Only use net nodes for node level task or not.')
 
     # Graph sampling setting
     parser.add_argument("--small_dataset_sample_rates", type=float, default=1.0, help="The sample rate for small dataset.")
@@ -64,10 +64,10 @@ if __name__ == "__main__":
     parser.add_argument("--batch_norm", type=int, default=1, help='Whether to use batch_norm in GNN+, if you use the attention mechanism, layernorm and batchnorm cannot both be equal to 1.')
     
     ## gnn+ setting
-    parser.add_argument('--residual', type=bool, default=True, help='Whether to use residuals in GNN+')
-    parser.add_argument('--g_bn', type=bool, default=True, help='Whether to use bn in GNN+')
+    parser.add_argument('--residual', type=int, default=1, help='Whether to use residuals in GNN+')
+    parser.add_argument('--g_bn', type=int, default=1, help='Whether to use bn in GNN+')
     parser.add_argument('--g_drop', type=float, default=0.3, help='Whether to use bn in GNN+')
-    parser.add_argument('--g_ffn', type=bool, default=True, help='Whether to use ffn in GNN+')
+    parser.add_argument('--g_ffn', type=int, default=1, help='Whether to use ffn in GNN+')
     
     ## Downstream GNN setting
     parser.add_argument("--model", type=str, default='sage', choices=['clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'], help="The gnn model. Could be 'clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'.")
