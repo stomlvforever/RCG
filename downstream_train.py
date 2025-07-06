@@ -399,8 +399,8 @@ def downstream_train(args, dataset, device, cl_embeds=None):
         dataset.set_cl_embeds(cl_embeds)
 
     dataset.norm_nfeat([NET, DEV])
-
-    
+    # print(f"dataset.norm_nfeat([NET, DEV]):{dataset.norm_nfeat([NET, DEV])}")
+    # assert 0
 
     
     
