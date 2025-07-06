@@ -13,6 +13,45 @@ from utils import (
 from torch.utils.data import Dataset
 from torch_geometric.data import Batch
 from torch_geometric.utils import subgraph
+import matplotlib
+matplotlib.use('Agg')     # 或者 'Qt5Agg'，取决于你的系统上装了哪个 GUI 库
+import matplotlib.pyplot as plt
+import numpy as np
+# 指定中文字体（以黑体 SimHei 为例，Windows 下通常就有；Linux 则需先安装）
+plt.rc("font",family='Nimbus Sans')
+
+def plot_edge_label_distribution(edge_labels: np.ndarray, class_boundaries: np.ndarray):
+    """
+    Plots the distribution of edge label classes.
+    
+    Args:
+        edge_labels: 1D numpy array of normalized edge label values (floats in [0, 1]).
+        class_boundaries: 1D numpy array of boundaries, e.g. [0.2, 0.4, 0.6, 0.8].
+    """
+    # Bucketize into class indices
+    edge_label_c = np.digitize(edge_labels, class_boundaries, right=False)
+    
+    # Count occurrences per class
+    num_classes = len(class_boundaries) + 1
+    counts = np.bincount(edge_label_c, minlength=num_classes)
+    
+    # Prepare labels
+    class_labels = []
+    prev = 0.0
+    for b in class_boundaries:
+        class_labels.append(f"[{prev:.2f}, {b:.2f})")
+        prev = b
+    class_labels.append(f"[{prev:.2f}, 1.00]")
+    
+    # Plot
+    plt.figure()
+    plt.bar(range(num_classes), counts)
+    plt.xticks(range(num_classes), class_labels, rotation=45, ha='right')
+    plt.xlabel("Edge Label Class Range")
+    plt.ylabel("Number of Samples")
+    plt.title("Edge Label Class Distribution")
+    plt.tight_layout()
+    plt.show()
 
 class SealSramDataset(InMemoryDataset):
     def __init__(
@@ -43,6 +82,7 @@ class SealSramDataset(InMemoryDataset):
         self.name = 'sram'
         self.class_boundaries = torch.tensor(class_boundaries)
         print("self.class_boundaries", self.class_boundaries)
+        # assert 0
         ## split the dataset according to '+' in the name
         if '+' in name:
             self.names = name.split('+')
@@ -77,7 +117,8 @@ class SealSramDataset(InMemoryDataset):
             loaded_data, loaded_slices = torch.load(self.processed_paths[i])
             # print("loaded_data", loaded_data)
             # print("loaded_slices", loaded_slices)
-
+            
+            
             self.data_offsets[name] = len(data_list)
             if self.task_level == 'node':
                 self.data_lengths[name] = loaded_data.y.size(0)
@@ -94,36 +135,55 @@ class SealSramDataset(InMemoryDataset):
             print(f"load processed {name}, "+
                   f"len(data_list)={self.data_lengths[name]}, "+
                   f"data_offset={self.data_offsets[name]} ")
-    
+            
         ## combine multiple graphs into data list
         self.data, self.slices = self.collate(data_list)
 
     def norm_nfeat(self, ntypes):
-        """
-         Only `DEVICE` and `NET` nodes have circuit statistics.
-        Args:
-            ntypes (list): The node types {0, 1} to be normalized
-        """
         if self._data is None or self.slices is None:
             self.data, self.slices = self.collate(self._data_list)
             self._data_list = None
-
-        # normalize the node features
+        # 首先检查哪些节点类型实际存在
+        existing_types = torch.unique(self._data.node_type)
+        print(f"实际存在的节点类型: {existing_types}")
+        
         for ntype in ntypes:
+            if ntype not in existing_types:
+                print(f"节点类型 {ntype} 不存在，跳过")
+                continue
+                
             node_mask = self._data.node_type == ntype
+            num_nodes_of_type = node_mask.sum().item()
+            
+            if num_nodes_of_type == 0:
+                print(f"节点类型 {ntype} 数量为0，跳过")
+                continue
+                
+            print(f"node_mask.sum():{node_mask.sum()}")
+            
+            # 如果是 DEV 类型（device 节点），跳过标准化
+            if ntype == 1:
+                print(f"跳过 DEV 类型节点标准化（数量: {num_nodes_of_type}）")
+                continue
+                
+            # 标准化其他类型节点
             max_node_feat, _ = self._data.node_attr[node_mask].max(dim=0, keepdim=True)
             max_node_feat[max_node_feat == 0.0] = 1.0
-
-            print(f"normalizing node_attr {ntype}: {max_node_feat} ...")
             self._data.node_attr[node_mask] /= max_node_feat
+            print(f"标准化类型 {ntype} 节点（数量: {num_nodes_of_type}）")
+
 
         if self.task_level == 'edge':
             ## normalize edge_label i.e., coupling capacitance
-            self._data.edge_label = torch.log10(self._data.edge_label * 1e21) 
+            self._data.edge_label = torch.log10(self._data.edge_label * 1e21)
+
             self._data.edge_label /= 6
+
             self._data.edge_label[self._data.edge_label < 0] = 0.0
+            
             self._data.edge_label[self._data.edge_label > 1] = 1.0
             edge_label_c = torch.bucketize(self._data.edge_label, self.class_boundaries)
+
             # print("="*50)
             # print("边标签分布分析:")
             # print(f"总边标签数量: {len(self._data.edge_label)}")
@@ -140,7 +200,6 @@ class SealSramDataset(InMemoryDataset):
             # print(f"统计总数: {total_counted} (应该匹配总数: {len(self._data.edge_label)})")
             # print("="*50)
             
-            # edge_label_c = torch.bucketize(self._data.edge_label, self.class_boundaries)
             
             # # Also print the class distribution after bucketizing
             # print("分桶后的类别分布:")
@@ -149,7 +208,12 @@ class SealSramDataset(InMemoryDataset):
             #     percentage = count.item() / len(edge_label_c) * 100
             #     print(f"类别 {cls.item()}: {count.item()} 样本 ({percentage:.2f}%)")
             # print("="*50)
-            # assert 0
+            # # assert 0
+            num_classes = len(self.class_boundaries) + 1
+            edge_labels_np = self._data.edge_label.cpu().numpy().flatten()
+            class_bounds_np = self.class_boundaries.cpu().numpy()
+            plot_edge_label_distribution(edge_labels_np, class_bounds_np)
+            plt.savefig(f'imgs/edge_label_dist_{num_classes}.png')
             self._data.edge_label = torch.stack(
                 [self._data.edge_label, edge_label_c], dim=1
             )
@@ -157,19 +221,53 @@ class SealSramDataset(InMemoryDataset):
 
         elif self.task_level == 'node':
             ## normalize the node label i.e., lumped ground capacitance
+            # print(self._data.y.max())
+            # print(self._data.y.min())
+            # print(self._data.y) 
+            # print(self._data) 
+            # assert 0
             self._data.y = torch.log10(self._data.y * 1e20) / 6
+
             self._data.y[self._data.y < 0] = 0.0
             self._data.y[self._data.y > 1] = 1.0
-            node_label_c = torch.bucketize(self._data.y, self.class_boundaries)
+            node_label_c = torch.bucketize(self._data.y.squeeze(), self.class_boundaries)
+            
+            artificial_mask = torch.log10(self._data.y * 1e20) / 6 < -1.5  # 识别阈值
+    
+            ## 绘图时只使用真实数据
+            if artificial_mask.any():
+                valid_labels = self._data.y[~artificial_mask].cpu().numpy().flatten()
+                print(f"[绘图过滤] 已排除{artificial_mask.sum().item()}个人工添加的节点")
+            else:
+                valid_labels = self._data.y.cpu().numpy().flatten()
+            
+            ## 保持原有的存储方式不变
+            
+            ## 使用过滤后的数据绘图
+            num_classes = len(self.class_boundaries) + 1
+            plot_edge_label_distribution(valid_labels, self.class_boundaries.cpu().numpy())
+            plt.savefig(f'imgs/node_label_dist_{num_classes}.png')
+            plt.close()
             # print("="*50)
             # print("节点标签分布分析:")
             # print(f"总节点标签数量: {len(self._data.y)}")
             
             # # 定义节点类型名称映射
             # node_type_names = {0: 'NET', 1: 'DEV', 2: 'PIN'}
-            
+            # # types, counts = torch.unique(self._data.node_type, return_counts=True)
+            # # for t, cnt in zip(types.tolist(), counts.tolist()):
+            # #     name = node_type_names.get(t, f'未知类型{t}')
+            # #     print(f"node_type = {t}: 名称 = {name}, 数量 = {cnt}")
+            # # assert 0
+            # # """
+            # # 节点标签分布分析:
+            # # 总节点标签数量: 22335575
+            # # node_type = 0: 名称 = NET, 数量 = 2050724
+            # # node_type = 1: 名称 = DEV, 数量 = 5073987
+            # # node_type = 2: 名称 = PIN, 数量 = 15210864
+            # # """
             # # 获取所有节点类型
-            # unique_node_types = torch.unique(self._data.node_type)
+            # unique_node_types = torch.unique(self._data.node_type) #['net', 'device', 'pin']
             # # print(f"unique_node_types{unique_node_types}")
             # # assert 0
             # # 分析每种节点类型的标签分布
@@ -229,7 +327,7 @@ class SealSramDataset(InMemoryDataset):
             # total_counted = range_0_02 + range_02_04 + range_04_06 + range_06_08 + range_08_1
             # print(f"统计总数: {total_counted} (应该匹配总数: {total_nodes})")
             
-            # # 总体分桶后的类别分布
+            # 总体分桶后的类别分布
             # print("总体分桶后的类别分布:")
             # unique_classes, class_counts = torch.unique(node_label_c, return_counts=True)
             # for i, (cls, count) in enumerate(zip(unique_classes, class_counts)):
@@ -238,8 +336,9 @@ class SealSramDataset(InMemoryDataset):
             # print("="*50)
             # assert 0
             
+
             self._data.y = torch.stack(
-                [self._data.y, node_label_c], dim=1
+                [self._data.y.squeeze(), node_label_c], dim=1
             )
             print("self._data.y", self._data.y)
             self._data_list = None
@@ -274,6 +373,15 @@ class SealSramDataset(InMemoryDataset):
             raw_path (str): The path of the raw data file.
         Returns:
             g (torch_geometric.data.Data): The processed homo graph data.
+            处理后的图包含：
+
+        节点特征：g.x（节点类型）和g.node_attr（电路统计特征）
+        边连接：g.edge_index（结构边）
+        目标数据：
+
+        g.tar_node_y：节点接地电容（节点级任务）
+        g.tar_edge_y：边耦合电容（边级任务）
+        g.tar_edge_index：目标边的连接关系
         """
         # print(f"name:{name}")
         # assert 0
@@ -304,15 +412,15 @@ class SealSramDataset(InMemoryDataset):
             power_net_ids = torch.tensor([0, 1])
         
         # ===== 添加调试打印：查看原始异构图的节点类型 =====
-        print(f"原始异构图的节点类型: {hg.node_types}")
-        for ntype in hg.node_types:
-            print(f"节点类型 '{ntype}': 数量 = {hg[ntype].num_nodes}")
-            if hasattr(hg[ntype], 'x'):
-                print(f"  特征维度: {hg[ntype].x.shape}")
-            if hasattr(hg[ntype], 'y'):
-                print(f"  标签维度: {hg[ntype].y.shape}")
-                print(f"  标签范围: [{hg[ntype].y.min():.2e}, {hg[ntype].y.max():.2e}]")
-        print("=" * 50)
+        # print(f"原始异构图的节点类型: {hg.node_types}")
+        # for ntype in hg.node_types:
+        #     print(f"节点类型 '{ntype}': 数量 = {hg[ntype].num_nodes}")
+        #     if hasattr(hg[ntype], 'x'):
+        #         print(f"  特征维度: {hg[ntype].x.shape}")
+        #     if hasattr(hg[ntype], 'y'):
+        #         print(f"  标签维度: {hg[ntype].y.shape}")
+        #         print(f"  标签范围: [{hg[ntype].y.min():.2e}, {hg[ntype].y.max():.2e}]")
+        # print("=" * 50)
         
         """ graph transform """ 
         ### remove the power pins
@@ -324,19 +432,16 @@ class SealSramDataset(InMemoryDataset):
 
         hg = hg.subgraph(subset_dict)
         hg = hg.edge_type_subgraph([
-            ## circuit connections in schematics
-            ('device', 'device-pin', 'pin'),
-            ('pin', 'pin-net', 'net'),
-            ## parasitic coupling edges: pin2net, pin2pin, net2net
-            ('pin', 'cc_p2n', 'net'),
-            ('pin', 'cc_p2p', 'pin'),
-            ('net', 'cc_n2n', 'net'),
+            ('device', 'device-pin', 'pin'),  # 器件到引脚的连接
+            ('pin', 'pin-net', 'net'),        # 引脚到网络的连接
+            ('pin', 'cc_p2n', 'net'),        # 引脚到网络的寄生耦合
+            ('pin', 'cc_p2p', 'pin'),        # 引脚到引脚的寄生耦合
+            ('net', 'cc_n2n', 'net'),        # 网络到网络的寄生耦合
         ])
-
-        print(hg)
-
+        print(f"hg:{hg}")
+        # assert 0
         ### transform hetero g into homo g
-        g = hg.to_homogeneous()
+        g = hg.to_homogeneous() # 异构图转同构图 Data(edge_index=[2, 931250], x=[249570, 17], y=[931250], node_type=[249570], edge_type=[931250])
         g.name = name
         assert hasattr(g, 'node_type')
         assert hasattr(g, 'edge_type')
@@ -348,23 +453,31 @@ class SealSramDataset(InMemoryDataset):
         max_feat_dim = 17 # the max feature dimension of nodes
 
         hg['device'].y = torch.ones((hg['device'].x.shape[0], 1)) * 1e-30   # 1e-30 is the minimum ground capacitance value
-
+        # print(hg.node_types)
+        # assert 0
         for n, ntype in enumerate(hg.node_types):
-            g._n2type[ntype] = n
+            g._n2type[ntype] = n # 节点类型到整数的映射
             feat = hg[ntype].x
             feat = torch.nn.functional.pad(feat, (0, max_feat_dim-feat.size(1)))
             node_feat.append(feat)
             tar_node_y.append(hg[ntype].y)
         
+        # print("映射关系 g._n2type =", g._n2type)
+        # # 然后再统计每个 node_type 的数量
+        # types, counts = torch.unique(g.node_type, return_counts=True)
+        # for t, cnt in zip(types.tolist(), counts.tolist()):
+        #     name = [k for k,v in g._n2type.items() if v == t][0]
+        #     print(f"{name}({t}) 节点数 = {cnt}")        
+        # assert 0
         # ===== 添加调试打印：查看节点类型映射 =====
-        print(f"节点类型到整数的映射 g._n2type: {g._n2type}")
-        print(f"同构图总节点数: {g.num_nodes}")
-        print(f"同构图节点类型分布:")
-        for ntype, type_id in g._n2type.items():
-            mask = g.node_type == type_id
-            count = mask.sum().item()
-            print(f"  {ntype} (type_id={type_id}): {count} 个节点")
-        print("=" * 50)
+        # print(f"节点类型到整数的映射 g._n2type: {g._n2type}")
+        # print(f"同构图总节点数: {g.num_nodes}")
+        # print(f"同构图节点类型分布:")
+        # for ntype, type_id in g._n2type.items():
+        #     mask = g.node_type == type_id
+        #     count = mask.sum().item()
+        #     print(f"  {ntype} (type_id={type_id}): {count} 个节点")
+        # print("=" * 50)
         
         ## There is 'node_type' attribute after transforming hg to g.
         ## The 'node_type' is used as default node feature, g.x.
@@ -379,63 +492,79 @@ class SealSramDataset(InMemoryDataset):
                 net_nodes = torch.where(net_mask)[0]
                 g.tar_node_y[net_nodes] = hg['net'].y  # assign the ground capacitance value to the net nodes
                 
-                # ===== 添加调试打印：仅net节点的标签 =====
-                print(f"仅处理net节点模式:")
-                print(f"  net节点数量: {net_nodes.shape[0]}")
-                print(f"  net节点标签范围: [{g.tar_node_y[net_nodes].min():.2e}, {g.tar_node_y[net_nodes].max():.2e}]")
+                # # ===== 添加调试打印：仅net节点的标签 =====
+                # print(f"仅处理net节点模式:")
+                # print(f"  net节点数量: {net_nodes.shape[0]}")
+                # print(f"  net节点标签范围: [{g.tar_node_y[net_nodes].min():.2e}, {g.tar_node_y[net_nodes].max():.2e}]")
                 
             else:
                 ## lumped ground capacitance on net/pin nodes
                 g.tar_node_y = torch.cat(tar_node_y, dim=0)
-                
-                # ===== 添加调试打印：所有节点的标签 =====
-                print(f"处理所有节点模式:")
-                print(f"  总标签数量: {g.tar_node_y.shape[0]}")
-                print(f"  总标签范围: [{g.tar_node_y.min():.2e}, {g.tar_node_y.max():.2e}]")
+            
+            # print(f"g.tar_node_y.shape[0]:{g.tar_node_y.shape[0]}")
+
+                # # ===== 添加调试打印：所有节点的标签 =====
+                # print(f"处理所有节点模式:")
+                # print(f"  总标签数量: {g.tar_node_y.shape[0]}")
+                # print(f"  总标签范围: [{g.tar_node_y.min():.2e}, {g.tar_node_y.max():.2e}]")
                 
                 # 分别打印每种节点类型的标签统计
-                start_idx = 0
-                for ntype in hg.node_types:
-                    type_id = g._n2type[ntype]
-                    mask = g.node_type == type_id
-                    nodes_of_type = torch.where(mask)[0]
-                    if len(nodes_of_type) > 0:
-                        labels_of_type = g.tar_node_y[nodes_of_type]
-                        print(f"  {ntype} 节点标签:")
-                        print(f"    数量: {len(nodes_of_type)}")
-                        print(f"    范围: [{labels_of_type.min():.2e}, {labels_of_type.max():.2e}]")
-                        print(f"    均值: {labels_of_type.mean():.2e}")
-                        print(f"    标准差: {labels_of_type.std():.2e}")
+            #     start_idx = 0
+            #     for ntype in hg.node_types:
+            #         type_id = g._n2type[ntype]
+            #         mask = g.node_type == type_id
+            #         nodes_of_type = torch.where(mask)[0]
+            #         if len(nodes_of_type) > 0:
+            #             labels_of_type = g.tar_node_y[nodes_of_type]
+            #             print(f"  {ntype} 节点标签:")
+            #             print(f"    数量: {len(nodes_of_type)}")
+            #             print(f"    范围: [{labels_of_type.min():.2e}, {labels_of_type.max():.2e}]")
+            #             print(f"    均值: {labels_of_type.mean():.2e}")
+            #             print(f"    标准差: {labels_of_type.std():.2e}")
                         
-                        # 显示标签分布的直方图信息
-                        unique_labels, counts = labels_of_type.unique(return_counts=True)
-                        print(f"    唯一标签数: {len(unique_labels)}")
-                        if len(unique_labels) <= 10:
-                            print(f"    标签分布: {dict(zip(unique_labels.tolist(), counts.tolist()))}")
-                        else:
-                            print(f"    前5个最常见标签: {dict(zip(unique_labels[:5].tolist(), counts[:5].tolist()))}")
+            #             # 显示标签分布的直方图信息
+            #             unique_labels, counts = labels_of_type.unique(return_counts=True)
+            #             print(f"    唯一标签数: {len(unique_labels)}")
+            #             if len(unique_labels) <= 10:
+            #                 print(f"    标签分布: {dict(zip(unique_labels.tolist(), counts.tolist()))}")
+            #             else:
+            #                 print(f"    前5个最常见标签: {dict(zip(unique_labels[:5].tolist(), counts[:5].tolist()))}")
             
-            print("=" * 50)
+            # print("=" * 50)
             g.y = g.tar_node_y
-        
+        # print(f"g.y.max:{g.y.max()}")
+        """
+        tensor([[7.1959e-18],
+        [5.6060e-15],
+        [1.0105e-16],
+        ...,
+        [0.0000e+00],
+        [0.0000e+00],
+        [0.0000e+00]])
+        """
         g._e2type = {}
 
         for e, (edge, store) in enumerate(hg.edge_items()):
             g._e2type[edge] = e
-            if 'cc' in edge[1]:
-                tar_edge_y.append(store['y'])
+            if 'cc' in edge[1]: # 寄生耦合边
+                tar_edge_y.append(store['y']) 
             else:
                 # edge_index's shape [2, num_edges]
                 edge_offset += store['edge_index'].shape[1]
-        
+        # 分离结构边（电路拓扑）和目标边（寄生耦合
         g._num_ntypes = len(g._n2type)
+        # print(f"g._n2type:{g._n2type}") #g._n2type:{'net': 0, 'device': 1, 'pin': 2}
         g._num_etypes = len(g._e2type)
+        # print(f"g._e2type:{g._e2type}") #g._e2type:{('device', 'device-pin', 'pin'): 0, ('pin', 'pin-net', 'net'): 1, ('pin', 'cc_p2n', 'net'): 2, ('pin', 'cc_p2p', 'pin'): 3, ('net', 'cc_n2n', 'net'): 4}
+
         logging.info(f"g._n2type {g._n2type}")
         logging.info(f"g._e2type {g._e2type}")
-
+        # print(f"edge_offset:{edge_offset}") #306385
+        # assert 0
         tar_edge_index = g.edge_index[:, edge_offset:]
         tar_edge_type = g.edge_type[edge_offset:]
         tar_edge_y = torch.cat(tar_edge_y)
+        # print(f"tar_edge_y:{tar_edge_y}") #tar_edge_y:tensor([3.4233e-18, 3.8098e-19, 3.0819e-19,  ..., 1.5311e-17, 2.0015e-17,6.0056e-18])
 
         # testing
         # for i in range(tar_edge_type.min(), tar_edge_type.max()+1):
@@ -445,15 +574,90 @@ class SealSramDataset(InMemoryDataset):
 
         ## restrict the capcitance value range 
         legel_edge_mask = (tar_edge_y < 1e-15) & (tar_edge_y > 1e-21)
+        """
+        # legal_node_mask = (g.tar_node_y < 1e-15) & (g.tar_node_y > 1e-21)
+        # legal_node_mask = legal_node_mask.squeeze()
+        # g.tar_node_y = g.tar_node_y[legal_node_mask]
+        # g.x = g.x[legal_node_mask]
+        # g.node_attr = g.node_attr[legal_node_mask]  
+        # g.node_type = g.node_type[legal_node_mask]
+        # print(f"node_attr:{g.node_attr.size()},legal_node_mask：{legal_node_mask.size()}，tar_edge_index：{tar_edge_index.size()}，legel_edge_mask:{legel_edge_mask.size()}")
+        # print(f"tar_edge_type:{tar_edge_type},g.x:{g.x},g.y:{g.y}")
+        # assert 0
+
+        node_attr:torch.Size([249570, 17]),legal_node_mask：torch.Size([249570])，tar_edge_index：torch.Size([2, 624865])，legel_edge_mask:torch.Size([624865])
+        tar_edge_type:tensor([2, 2, 2,  ..., 4, 4, 4]),node_type:tensor([0, 0, 0,  ..., 2, 2, 2]),g.x:tensor([[0],
+        [0],
+        [0],
+        ...,
+        [2],
+        [2],
+        [2]]),g.y:tensor([[7.1959e-18],
+        [5.6060e-15],
+        [1.0105e-16],
+        ...,
+        [2.2452e-19],
+        [2.3456e-18],
+        [2.0348e-20]])
+        """
+        legal_node_mask = (g.tar_node_y < 1e-15) & (g.tar_node_y > 1e-21)
+        legal_node_mask = legal_node_mask.squeeze()
+        print(f"(~legal_node_mask).sum().item():{(~legal_node_mask).sum().item()},legal_node_mask:{legal_node_mask.size()}") #(~legal_node_mask).sum().item():126659,legal_node_mask:torch.Size([249570])
+       
+        # 替换非法值（此处用 1e-30 保证对数变换有效）
+        # 假设：
+        # - g.tar_node_y 是原始数据（可能包含 1e-30）
+        # - legal_node_mask 是合法掩码（False 表示非法节点）
+        # 获取非法节点的值
+        # invalid_node_values = g.tar_node_y[~legal_node_mask]
+
+        # # 过滤掉 0（或 1e-30），并找最小值
+        # if len(invalid_node_values) > 0:
+        #     non_zero_values = invalid_node_values[invalid_node_values > 1e-30]  # 或 != 0.0
+        #     if len(non_zero_values) > 0:
+        #         min_non_zero_in_invalid = non_zero_values.min()
+        #         print(f"非法节点中非零的最小值: {min_non_zero_in_invalid}") 非法节点中非零的最小值: 1.0339799565148436e-25
+        #     else:
+        #         print("所有非法节点的值都是 0（或 1e-30）")
+        # else:
+        #     print("没有非法节点")
+
+        g.tar_node_y[~legal_node_mask] = 1e-30
+
+        # print(f"node_attr:{g.node_attr.size()},legal_node_mask：{legal_node_mask.size()}，tar_edge_index：{tar_edge_index.size()}，legel_edge_mask:{legel_edge_mask.size()}")
+        # print(f"tar_edge_type:{tar_edge_type},g.x:{g.x},g.y:{g.y}")
+        # assert 0
+        """
+        node_attr:torch.Size([122911, 17]),legal_node_mask：torch.Size([249570])，tar_edge_index：torch.Size([2, 624865])，legel_edge_mask:torch.Size([624865])
+        tar_edge_type:tensor([2, 2, 2,  ..., 4, 4, 4]),g.x:tensor([[0],
+        [0],
+        [0],
+        ...,
+        [2],
+        [2],
+        [2]]),g.y:tensor([[7.1959e-18],
+        [5.6060e-15],
+        [1.0105e-16],
+        ...,
+        [2.2452e-19],
+        [2.3456e-18],
+        [2.0348e-20]])
+        """
+
         # tar_edge_src_y = g.tar_node_y[tar_edge_index[0, :]].squeeze()
         # tar_edge_dst_y = g.tar_node_y[tar_edge_index[1, :]].squeeze()
         # legel_node_mask = (tar_edge_src_y < 1e-13) & (tar_edge_src_y > 1e-23)
         # legel_node_mask &= (tar_edge_dst_y < 1e-13) & (tar_edge_dst_y > 1e-23)
+        # g.legal_node_mask = legal_node_mask.squeeze()
 
-        ## remove the target edges with extreme capacitance values
+
+        print(f"\nProcessing dataset {name}, node types: {torch.unique(g.node_type)}")  # 显示过滤后的节点类型
+        print(f"Node type counts: {torch.bincount(g.node_type)}")  # 各类型节点数量
+
         g.tar_edge_y = tar_edge_y[legel_edge_mask]# & legel_node_mask]
         g.tar_edge_index = tar_edge_index[:, legel_edge_mask]# & legel_node_mask]
         g.tar_edge_type = tar_edge_type[legel_edge_mask]# & legel_node_mask]
+        
         # logging.info(f"we filter out the edges with Cc > 1e-15 and Cc < 1e-21 " + 
         #              f"{legel_edge_mask.size(0)-legel_edge_mask.sum()}")
         # logging.info(f"we filter out the edges with src/dst Cg > 1e-13 and Cg < 1e-23 " +
@@ -461,29 +665,69 @@ class SealSramDataset(InMemoryDataset):
 
         ## Calculate target edge type distributions (Cc_p2n : Cc_p2p : Cc_n2n)
         _, g.tar_edge_dist = g.tar_edge_type.unique(return_counts=True)
-        
+        # print(f"g.tar_edge_dist:{g.tar_edge_dist}") #tensor([261027, 285103,  58461])
         ## remove target edges from the original g
         g.edge_type = g.edge_type[0:edge_offset]
         g.edge_index = g.edge_index[:, 0:edge_offset]
         
+        # processed_node_labels = torch.log10(g.tar_node_y * 1e21) / 6
 
+        # # Identify artificially added 1e-30 values
+        # artificial_mask = torch.isclose(g.tar_node_y, torch.tensor(1e-30), atol=1e-32)
+        # print(f"Artificially added nodes count: {artificial_mask.sum().item()}")
+
+        # # Apply clipping to all data
+        # processed_node_labels[processed_node_labels < 0] = 0.0
+        # processed_node_labels[processed_node_labels > 1] = 1.0
+
+        # # Perform bucketing (using all data)
+        # node_label_c = torch.bucketize(processed_node_labels.squeeze(), self.class_boundaries)
+
+        # # [Keep all your existing analysis code here...]
+
+        # # Visualization with your requested style
+        # # Visualization with your requested style
+        # valid_labels_np = processed_node_labels[~artificial_mask].cpu().numpy()
+
+        # plt.figure()
+        # ax = plt.gca()
+
+        # # Set gray background inside plot only
+        # ax.set_facecolor('lightgray')
+
+        # # Set white background for figure (outer area)
+        # plt.gcf().set_facecolor('white')
+
+        # plt.hist(valid_labels_np, 
+        #         bins=50,
+        #         density=True,      # Y-axis as density
+        #         color='orange',    # Orange bars
+        #         edgecolor='white') # White edges
+
+        # plt.xlabel('normalized label')
+        # plt.ylabel('density')
+
+        # # Add a white grid for better visibility
+        # ax.grid(True, color='white', linestyle='-', linewidth=0.5)
+
+        # plt.savefig(f'imgs/node_label_dist_{name}.png', bbox_inches='tight', pad_inches=0.1, dpi=300)
+        # plt.close()
+        
+        # print("="*50)        
+        # assert 0
         ## convert to undirected edges
         if self.to_undirected:
                 g.edge_index, g.edge_type = to_undirected(
                     g.edge_index, g.edge_type, g.num_nodes, reduce='mean'
                 )
         
-        # ===== 最终调试打印：总结信息 =====
-        print(f"最终处理结果:")
-        print(f"  图名称: {g.name}")
-        print(f"  总节点数: {g.num_nodes}")
-        print(f"  总边数: {g.edge_index.shape[1]}")
-        print(f"  目标边数: {g.tar_edge_index.shape[1]}")
-        print(f"  节点特征维度: {g.x.shape}")
-        print(f"  节点属性维度: {g.node_attr.shape}")
-        if hasattr(g, 'y'):
-            print(f"  节点标签维度: {g.y.shape}")
-        print("=" * 50)
+        # print("\n=== 节点类型分布验证 ===")
+        # unique_types, type_counts = torch.unique(g.node_type, return_counts=True)
+        # print("存在的节点类型及数量:")
+        # for typ, cnt in zip(unique_types.tolist(), type_counts.tolist()):
+        #     print(f"类型 {typ}: {cnt} 个节点")
+
+        # print("节点类型映射字典:", g._n2type)
         
         return g
 
@@ -496,7 +740,7 @@ class SealSramDataset(InMemoryDataset):
         
         ## generate negative edges for the loaded graph
         neg_edge_index, neg_edge_type = get_pos_neg_edges(
-            graph, neg_ratio=self.neg_edge_ratio)
+            graph, neg_ratio=self.neg_edge_ratio)  # 为边级任务生成负样本
         
         
         ## sample a portion of pos/neg edges
