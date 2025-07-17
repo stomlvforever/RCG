@@ -17,6 +17,7 @@ import matplotlib
 matplotlib.use('Agg')     # 或者 'Qt5Agg'，取决于你的系统上装了哪个 GUI 库
 import matplotlib.pyplot as plt
 import numpy as np
+from plot import visualize_node_label_distribution, visualize_edge_label_distribution
 # 指定中文字体（以黑体 SimHei 为例，Windows 下通常就有；Linux 则需先安装）
 plt.rc("font",family='Nimbus Sans')
 
@@ -564,16 +565,7 @@ class SealSramDataset(InMemoryDataset):
         tar_edge_index = g.edge_index[:, edge_offset:]
         tar_edge_type = g.edge_type[edge_offset:]
         tar_edge_y = torch.cat(tar_edge_y)
-        # print(f"tar_edge_y:{tar_edge_y}") #tar_edge_y:tensor([3.4233e-18, 3.8098e-19, 3.0819e-19,  ..., 1.5311e-17, 2.0015e-17,6.0056e-18])
 
-        # testing
-        # for i in range(tar_edge_type.min(), tar_edge_type.max()+1):
-        #     mask = tar_edge_type == i
-        #     print("tar_edge_type", tar_edge_type[mask][0], "tar_edge_y", tar_edge_y[mask][0])
-        # assert 0
-
-        ## restrict the capcitance value range 
-        legel_edge_mask = (tar_edge_y < 1e-15) & (tar_edge_y > 1e-21)
         """
         # legal_node_mask = (g.tar_node_y < 1e-15) & (g.tar_node_y > 1e-21)
         # legal_node_mask = legal_node_mask.squeeze()
@@ -605,156 +597,75 @@ class SealSramDataset(InMemoryDataset):
             legal_node_mask = legal_node_mask.squeeze()
             print(f"(~legal_node_mask).sum().item():{(~legal_node_mask).sum().item()},legal_node_mask:{legal_node_mask.size()}") #(~legal_node_mask).sum().item():126659,legal_node_mask:torch.Size([249570])
         
-        # 替换非法值（此处用 1e-30 保证对数变换有效）
-        # 假设：
-        # - g.tar_node_y 是原始数据（可能包含 1e-30）
-        # - legal_node_mask 是合法掩码（False 表示非法节点）
-        # 获取非法节点的值
-        # invalid_node_values = g.tar_node_y[~legal_node_mask]
+            # 替换非法值（此处用 1e-30 保证对数变换有效）
+            # 假设：
+            # - g.tar_node_y 是原始数据（可能包含 1e-30）
+            # - legal_node_mask 是合法掩码（False 表示非法节点）
+            # 获取非法节点的值
+            # invalid_node_values = g.tar_node_y[~legal_node_mask]
 
-        # # 过滤掉 0（或 1e-30），并找最小值
-        # if len(invalid_node_values) > 0:
-        #     non_zero_values = invalid_node_values[invalid_node_values > 1e-30]  # 或 != 0.0
-        #     if len(non_zero_values) > 0:
-        #         min_non_zero_in_invalid = non_zero_values.min()
-        #         print(f"非法节点中非零的最小值: {min_non_zero_in_invalid}") 非法节点中非零的最小值: 1.0339799565148436e-25
-        #     else:
-        #         print("所有非法节点的值都是 0（或 1e-30）")
-        # else:
-        #     print("没有非法节点")
+            # # 过滤掉 0（或 1e-30），并找最小值
+            # if len(invalid_node_values) > 0:
+            #     non_zero_values = invalid_node_values[invalid_node_values > 1e-30]  # 或 != 0.0
+            #     if len(non_zero_values) > 0:
+            #         min_non_zero_in_invalid = non_zero_values.min()
+            #         print(f"非法节点中非零的最小值: {min_non_zero_in_invalid}") 非法节点中非零的最小值: 1.0339799565148436e-25
+            #     else:
+            #         print("所有非法节点的值都是 0（或 1e-30）")
+            # else:
+            #     print("没有非法节点")
 
             g.tar_node_y[~legal_node_mask] = 1e-30
             #================================  画图:node level =======================================
-            processed_node_labels = torch.log10(g.tar_node_y * 1e21) / 6
+            visualize_node_label_distribution(g, name, self.class_boundaries)
+            """
+            node_attr:torch.Size([122911, 17]),legal_node_mask：torch.Size([249570])，tar_edge_index：torch.Size([2, 624865])，legel_edge_mask:torch.Size([624865])
+            tar_edge_type:tensor([2, 2, 2,  ..., 4, 4, 4]),g.x:tensor([[0],
+            [0],
+            [0],
+            ...,
+            [2],
+            [2],
+            [2]]),g.y:tensor([[7.1959e-18],
+            [5.6060e-15],
+            [1.0105e-16],
+            ...,
+            [2.2452e-19],
+            [2.3456e-18],
+            [2.0348e-20]])
+            """
+        if self.task_level == 'edge':                   
+            ## restrict the capcitance value range 
+            legel_edge_mask = (tar_edge_y < 1e-15) & (tar_edge_y > 1e-21)
+            # tar_edge_src_y = g.tar_node_y[tar_edge_index[0, :]].squeeze()
+            # tar_edge_dst_y = g.tar_node_y[tar_edge_index[1, :]].squeeze()
+            # legel_node_mask = (tar_edge_src_y < 1e-13) & (tar_edge_src_y > 1e-23)
+            # legel_node_mask &= (tar_edge_dst_y < 1e-13) & (tar_edge_dst_y > 1e-23)
+            # g.legal_node_mask = legal_node_mask.squeeze()
 
-            # Identify artificially added 1e-30 values
-            artificial_mask = torch.isclose(g.tar_node_y, torch.tensor(1e-30), atol=1e-32)
-            print(f"Artificially added nodes count: {artificial_mask.sum().item()}")
 
-            # Apply clipping to all data
-            processed_node_labels[processed_node_labels < 0] = 0.0
-            processed_node_labels[processed_node_labels > 1] = 1.0
+            # print(f"\nProcessing dataset {name}, node types: {torch.unique(g.node_type)}")  # 显示过滤后的节点类型
+            # print(f"Node type counts: {torch.bincount(g.node_type)}")  # 各类型节点数量
 
-            # Perform bucketing (using all data)
-            node_label_c = torch.bucketize(processed_node_labels.squeeze(), self.class_boundaries)
-
-            # [Keep all your existing analysis code here...]
-
-            # Visualization with your requested style
-            # Visualization with your requested style
-            valid_labels_np = processed_node_labels[~artificial_mask].cpu().numpy()
-
-            plt.figure()
-            ax = plt.gca()
-
-            # Set gray background inside plot only
-            ax.set_facecolor('lightgray')
-
-            # Set white background for figure (outer area)
-            plt.gcf().set_facecolor('white')
-
-            plt.hist(valid_labels_np, 
-                    bins=50,
-                    density=True,      # Y-axis as density
-                    color='orange',    # Orange bars
-                    edgecolor='white') # White edges
-
-            plt.xlabel('normalized label', fontsize=22)  # 增大x轴标签字体
-            plt.ylabel('density', fontsize=22)         # 增大y轴标签字体
-
-            # Add a white grid for better visibility
-            ax.grid(True, color='white', linestyle='-', linewidth=0.5)
-
-            plt.savefig(f'imgs/node_label_dist_{name}.png', bbox_inches='tight', pad_inches=0.1, dpi=300)
-            plt.close()
+            g.tar_edge_y = tar_edge_y[legel_edge_mask]# & legel_node_mask]
+            g.tar_edge_index = tar_edge_index[:, legel_edge_mask]# & legel_node_mask]
+            g.tar_edge_type = tar_edge_type[legel_edge_mask]# & legel_node_mask]
             
-        """
-        node_attr:torch.Size([122911, 17]),legal_node_mask：torch.Size([249570])，tar_edge_index：torch.Size([2, 624865])，legel_edge_mask:torch.Size([624865])
-        tar_edge_type:tensor([2, 2, 2,  ..., 4, 4, 4]),g.x:tensor([[0],
-        [0],
-        [0],
-        ...,
-        [2],
-        [2],
-        [2]]),g.y:tensor([[7.1959e-18],
-        [5.6060e-15],
-        [1.0105e-16],
-        ...,
-        [2.2452e-19],
-        [2.3456e-18],
-        [2.0348e-20]])
-        """
+            # logging.info(f"we filter out the edges with Cc > 1e-15 and Cc < 1e-21 " + 
+            #              f"{legel_edge_mask.size(0)-legel_edge_mask.sum()}")
+            # logging.info(f"we filter out the edges with src/dst Cg > 1e-13 and Cg < 1e-23 " +
+            #              f"{legel_node_mask.size(0)-legel_node_mask.sum()}")
 
-        # tar_edge_src_y = g.tar_node_y[tar_edge_index[0, :]].squeeze()
-        # tar_edge_dst_y = g.tar_node_y[tar_edge_index[1, :]].squeeze()
-        # legel_node_mask = (tar_edge_src_y < 1e-13) & (tar_edge_src_y > 1e-23)
-        # legel_node_mask &= (tar_edge_dst_y < 1e-13) & (tar_edge_dst_y > 1e-23)
-        # g.legal_node_mask = legal_node_mask.squeeze()
-
-
-        # print(f"\nProcessing dataset {name}, node types: {torch.unique(g.node_type)}")  # 显示过滤后的节点类型
-        # print(f"Node type counts: {torch.bincount(g.node_type)}")  # 各类型节点数量
-
-        g.tar_edge_y = tar_edge_y[legel_edge_mask]# & legel_node_mask]
-        g.tar_edge_index = tar_edge_index[:, legel_edge_mask]# & legel_node_mask]
-        g.tar_edge_type = tar_edge_type[legel_edge_mask]# & legel_node_mask]
-        
-        # logging.info(f"we filter out the edges with Cc > 1e-15 and Cc < 1e-21 " + 
-        #              f"{legel_edge_mask.size(0)-legel_edge_mask.sum()}")
-        # logging.info(f"we filter out the edges with src/dst Cg > 1e-13 and Cg < 1e-23 " +
-        #              f"{legel_node_mask.size(0)-legel_node_mask.sum()}")
-
-        ## Calculate target edge type distributions (Cc_p2n : Cc_p2p : Cc_n2n)
-        _, g.tar_edge_dist = g.tar_edge_type.unique(return_counts=True)
-        # print(f"g.tar_edge_dist:{g.tar_edge_dist}") #tensor([261027, 285103,  58461])
-        ## remove target edges from the original g
-        g.edge_type = g.edge_type[0:edge_offset]
-        g.edge_index = g.edge_index[:, 0:edge_offset]
-        
-        
-        #================================  画图:egde level =======================================
-        edge_labels = torch.log10(g.tar_edge_y * 1e21) / 6
-
-        # Identify artificially added 1e-30 values
-        artificial_mask = torch.isclose(g.tar_edge_y, torch.tensor(1e-30), atol=1e-32)
-        print(f"Artificially added edge count: {artificial_mask.sum().item()}")
-
-        # Apply clipping to all data
-        edge_labels[edge_labels < 0] = 0.0
-        edge_labels[edge_labels > 1] = 1.0
-
-        # Perform bucketing (using all data)
-        edge_label_c = torch.bucketize(edge_labels.squeeze(), self.class_boundaries)
-
-        # [Keep all your existing analysis code here...]
-
-        # Visualization with your requested style
-        # Visualization with your requested style
-        valid_labels_np = edge_labels[~artificial_mask].cpu().numpy()
-
-        plt.figure()
-        ax = plt.gca()
-
-        # Set gray background inside plot only
-        ax.set_facecolor('lightgray')
-
-        # Set white background for figure (outer area)
-        plt.gcf().set_facecolor('white')
-
-        plt.hist(valid_labels_np, 
-                bins=50,
-                density=True,      # Y-axis as density
-                color='orange',    # Orange bars
-                edgecolor='white') # White edges
-
-        plt.xlabel('normalized label', fontsize=22)  # 增大x轴标签字体
-        plt.ylabel('density', fontsize=22)         # 增大y轴标签字体
-
-        # Add a white grid for better visibility
-        ax.grid(True, color='white', linestyle='-', linewidth=0.5)
-
-        plt.savefig(f'imgs/edge_label_dist_{name}.png', bbox_inches='tight', pad_inches=0.1, dpi=300)
-        plt.close()
+            ## Calculate target edge type distributions (Cc_p2n : Cc_p2p : Cc_n2n)
+            _, g.tar_edge_dist = g.tar_edge_type.unique(return_counts=True)
+            # print(f"g.tar_edge_dist:{g.tar_edge_dist}") #tensor([261027, 285103,  58461])
+            ## remove target edges from the original g
+            g.edge_type = g.edge_type[0:edge_offset]
+            g.edge_index = g.edge_index[:, 0:edge_offset]
+            
+            
+            #================================  画图:egde level =======================================
+            visualize_edge_label_distribution(g, name, self.class_boundaries)
         
         ## convert to undirected edges
         if self.to_undirected:
