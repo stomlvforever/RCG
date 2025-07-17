@@ -387,6 +387,7 @@ class SealSramDataset(InMemoryDataset):
         # assert 0
         logging.info(f"raw_path: {raw_path}")
         hg = torch.load(raw_path)
+        print(f"hg:{hg}")
         if isinstance(hg, list):
             hg = hg[0]
         # print("hg", hg)
@@ -438,7 +439,7 @@ class SealSramDataset(InMemoryDataset):
             ('pin', 'cc_p2p', 'pin'),        # 引脚到引脚的寄生耦合
             ('net', 'cc_n2n', 'net'),        # 网络到网络的寄生耦合
         ])
-        print(f"hg:{hg}")
+        # print(f"hg:{hg}")
         # assert 0
         ### transform hetero g into homo g
         g = hg.to_homogeneous() # 异构图转同构图 Data(edge_index=[2, 931250], x=[249570, 17], y=[931250], node_type=[249570], edge_type=[931250])
@@ -494,13 +495,12 @@ class SealSramDataset(InMemoryDataset):
                 
                 # # ===== 添加调试打印：仅net节点的标签 =====
                 # print(f"仅处理net节点模式:")
-                # print(f"  net节点数量: {net_nodes.shape[0]}")
+
                 # print(f"  net节点标签范围: [{g.tar_node_y[net_nodes].min():.2e}, {g.tar_node_y[net_nodes].max():.2e}]")
                 
             else:
                 ## lumped ground capacitance on net/pin nodes
                 g.tar_node_y = torch.cat(tar_node_y, dim=0)
-            
             # print(f"g.tar_node_y.shape[0]:{g.tar_node_y.shape[0]}")
 
                 # # ===== 添加调试打印：所有节点的标签 =====
@@ -600,10 +600,11 @@ class SealSramDataset(InMemoryDataset):
         [2.3456e-18],
         [2.0348e-20]])
         """
-        legal_node_mask = (g.tar_node_y < 1e-15) & (g.tar_node_y > 1e-21)
-        legal_node_mask = legal_node_mask.squeeze()
-        print(f"(~legal_node_mask).sum().item():{(~legal_node_mask).sum().item()},legal_node_mask:{legal_node_mask.size()}") #(~legal_node_mask).sum().item():126659,legal_node_mask:torch.Size([249570])
-       
+        if self.task_level == 'node' :
+            legal_node_mask = (g.tar_node_y < 1e-15) & (g.tar_node_y > 1e-21)
+            legal_node_mask = legal_node_mask.squeeze()
+            print(f"(~legal_node_mask).sum().item():{(~legal_node_mask).sum().item()},legal_node_mask:{legal_node_mask.size()}") #(~legal_node_mask).sum().item():126659,legal_node_mask:torch.Size([249570])
+        
         # 替换非法值（此处用 1e-30 保证对数变换有效）
         # 假设：
         # - g.tar_node_y 是原始数据（可能包含 1e-30）
@@ -622,11 +623,51 @@ class SealSramDataset(InMemoryDataset):
         # else:
         #     print("没有非法节点")
 
-        g.tar_node_y[~legal_node_mask] = 1e-30
+            g.tar_node_y[~legal_node_mask] = 1e-30
+            #================================  画图:node level =======================================
+            processed_node_labels = torch.log10(g.tar_node_y * 1e21) / 6
 
-        # print(f"node_attr:{g.node_attr.size()},legal_node_mask：{legal_node_mask.size()}，tar_edge_index：{tar_edge_index.size()}，legel_edge_mask:{legel_edge_mask.size()}")
-        # print(f"tar_edge_type:{tar_edge_type},g.x:{g.x},g.y:{g.y}")
-        # assert 0
+            # Identify artificially added 1e-30 values
+            artificial_mask = torch.isclose(g.tar_node_y, torch.tensor(1e-30), atol=1e-32)
+            print(f"Artificially added nodes count: {artificial_mask.sum().item()}")
+
+            # Apply clipping to all data
+            processed_node_labels[processed_node_labels < 0] = 0.0
+            processed_node_labels[processed_node_labels > 1] = 1.0
+
+            # Perform bucketing (using all data)
+            node_label_c = torch.bucketize(processed_node_labels.squeeze(), self.class_boundaries)
+
+            # [Keep all your existing analysis code here...]
+
+            # Visualization with your requested style
+            # Visualization with your requested style
+            valid_labels_np = processed_node_labels[~artificial_mask].cpu().numpy()
+
+            plt.figure()
+            ax = plt.gca()
+
+            # Set gray background inside plot only
+            ax.set_facecolor('lightgray')
+
+            # Set white background for figure (outer area)
+            plt.gcf().set_facecolor('white')
+
+            plt.hist(valid_labels_np, 
+                    bins=50,
+                    density=True,      # Y-axis as density
+                    color='orange',    # Orange bars
+                    edgecolor='white') # White edges
+
+            plt.xlabel('normalized label', fontsize=22)  # 增大x轴标签字体
+            plt.ylabel('density', fontsize=22)         # 增大y轴标签字体
+
+            # Add a white grid for better visibility
+            ax.grid(True, color='white', linestyle='-', linewidth=0.5)
+
+            plt.savefig(f'imgs/node_label_dist_{name}.png', bbox_inches='tight', pad_inches=0.1, dpi=300)
+            plt.close()
+            
         """
         node_attr:torch.Size([122911, 17]),legal_node_mask：torch.Size([249570])，tar_edge_index：torch.Size([2, 624865])，legel_edge_mask:torch.Size([624865])
         tar_edge_type:tensor([2, 2, 2,  ..., 4, 4, 4]),g.x:tensor([[0],
@@ -651,8 +692,8 @@ class SealSramDataset(InMemoryDataset):
         # g.legal_node_mask = legal_node_mask.squeeze()
 
 
-        print(f"\nProcessing dataset {name}, node types: {torch.unique(g.node_type)}")  # 显示过滤后的节点类型
-        print(f"Node type counts: {torch.bincount(g.node_type)}")  # 各类型节点数量
+        # print(f"\nProcessing dataset {name}, node types: {torch.unique(g.node_type)}")  # 显示过滤后的节点类型
+        # print(f"Node type counts: {torch.bincount(g.node_type)}")  # 各类型节点数量
 
         g.tar_edge_y = tar_edge_y[legel_edge_mask]# & legel_node_mask]
         g.tar_edge_index = tar_edge_index[:, legel_edge_mask]# & legel_node_mask]
@@ -670,51 +711,51 @@ class SealSramDataset(InMemoryDataset):
         g.edge_type = g.edge_type[0:edge_offset]
         g.edge_index = g.edge_index[:, 0:edge_offset]
         
-        # processed_node_labels = torch.log10(g.tar_node_y * 1e21) / 6
-
-        # # Identify artificially added 1e-30 values
-        # artificial_mask = torch.isclose(g.tar_node_y, torch.tensor(1e-30), atol=1e-32)
-        # print(f"Artificially added nodes count: {artificial_mask.sum().item()}")
-
-        # # Apply clipping to all data
-        # processed_node_labels[processed_node_labels < 0] = 0.0
-        # processed_node_labels[processed_node_labels > 1] = 1.0
-
-        # # Perform bucketing (using all data)
-        # node_label_c = torch.bucketize(processed_node_labels.squeeze(), self.class_boundaries)
-
-        # # [Keep all your existing analysis code here...]
-
-        # # Visualization with your requested style
-        # # Visualization with your requested style
-        # valid_labels_np = processed_node_labels[~artificial_mask].cpu().numpy()
-
-        # plt.figure()
-        # ax = plt.gca()
-
-        # # Set gray background inside plot only
-        # ax.set_facecolor('lightgray')
-
-        # # Set white background for figure (outer area)
-        # plt.gcf().set_facecolor('white')
-
-        # plt.hist(valid_labels_np, 
-        #         bins=50,
-        #         density=True,      # Y-axis as density
-        #         color='orange',    # Orange bars
-        #         edgecolor='white') # White edges
-
-        # plt.xlabel('normalized label')
-        # plt.ylabel('density')
-
-        # # Add a white grid for better visibility
-        # ax.grid(True, color='white', linestyle='-', linewidth=0.5)
-
-        # plt.savefig(f'imgs/node_label_dist_{name}.png', bbox_inches='tight', pad_inches=0.1, dpi=300)
-        # plt.close()
         
-        # print("="*50)        
-        # assert 0
+        #================================  画图:egde level =======================================
+        edge_labels = torch.log10(g.tar_edge_y * 1e21) / 6
+
+        # Identify artificially added 1e-30 values
+        artificial_mask = torch.isclose(g.tar_edge_y, torch.tensor(1e-30), atol=1e-32)
+        print(f"Artificially added edge count: {artificial_mask.sum().item()}")
+
+        # Apply clipping to all data
+        edge_labels[edge_labels < 0] = 0.0
+        edge_labels[edge_labels > 1] = 1.0
+
+        # Perform bucketing (using all data)
+        edge_label_c = torch.bucketize(edge_labels.squeeze(), self.class_boundaries)
+
+        # [Keep all your existing analysis code here...]
+
+        # Visualization with your requested style
+        # Visualization with your requested style
+        valid_labels_np = edge_labels[~artificial_mask].cpu().numpy()
+
+        plt.figure()
+        ax = plt.gca()
+
+        # Set gray background inside plot only
+        ax.set_facecolor('lightgray')
+
+        # Set white background for figure (outer area)
+        plt.gcf().set_facecolor('white')
+
+        plt.hist(valid_labels_np, 
+                bins=50,
+                density=True,      # Y-axis as density
+                color='orange',    # Orange bars
+                edgecolor='white') # White edges
+
+        plt.xlabel('normalized label', fontsize=22)  # 增大x轴标签字体
+        plt.ylabel('density', fontsize=22)         # 增大y轴标签字体
+
+        # Add a white grid for better visibility
+        ax.grid(True, color='white', linestyle='-', linewidth=0.5)
+
+        plt.savefig(f'imgs/edge_label_dist_{name}.png', bbox_inches='tight', pad_inches=0.1, dpi=300)
+        plt.close()
+        
         ## convert to undirected edges
         if self.to_undirected:
                 g.edge_index, g.edge_type = to_undirected(
@@ -737,7 +778,8 @@ class SealSramDataset(InMemoryDataset):
         ## we can load multiple graphs
         graph = self.sram_graph_load(self.names[idx], self.raw_paths[idx])
         print(f"loaded graph {graph}")
-        
+        # print(f"self.raw_paths:{self.raw_paths}")
+        # assert 0
         ## generate negative edges for the loaded graph
         neg_edge_index, neg_edge_type = get_pos_neg_edges(
             graph, neg_ratio=self.neg_edge_ratio)  # 为边级任务生成负样本
