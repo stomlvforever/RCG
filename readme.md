@@ -1,4 +1,4 @@
-# CircuitGCL: Transferable Parasitic Estimation via Graph Contrastive Learning and Label Rebalancing in AMS Circuits
+# RCG: A Graph Benchmark Suite for Parasitic Prediction Using Graph Machine Learning}
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/release/python-310/)
@@ -24,37 +24,28 @@ Official implementation of the paper "Transferable Parasitic Estimation via Grap
 
 ## 🔍 Overview
 
-CircuitGCL is a novel framework for accurate parasitic capacitance prediction in analog and mixed-signal (AMS) circuits using advanced graph neural networks. Our approach enables efficient and accurate parasitic estimation across different circuit designs, significantly reducing the need for expensive SPICE simulations during the circuit design process.
+The RCG benchmark suite addresses the challenge of parasitic capacitance prediction in Analog-Mixed-Signal (AMS) circuits at advanced nodes by providing a high-quality dataset sourced from commercial EDA tools and silicon-validated designs. This resource enables the development of more accurate machine learning models for parasitic effects. The suite also evaluates key Graph Neural Network (GNN) architectures, demonstrating how techniques like normalization and residual connections can significantly improve prediction accuracy for AMS design closure.
 
 Our framework supports four key parasitic estimation tasks:
 
 - Coupling Capacitance Regression/Classification
 - Ground Capacitance Regression/Classification:
 
-![Framework Workflow](imgs/fig-workflow.png)
+![Framework Workflow](imgs/Fig_3_V2.pdf)
 
-## ✨ Key Features
-
-CircuitGCL addresses two major challenges in parasitic estimation:
-
-1. **Enhanced Transferability** - Through self-supervised graph contrastive learning (SGRL), our model can generalize knowledge across different circuit designs
-2. **Robust Label Handling** - Using specialized loss functions and rebalancing strategies to address the severe imbalance in parasitic capacitance distributions
-3. **State-of-the-Art Performance** - Significant improvements in parasitic prediction accuracy compared to existing methods
-
-![Circuit Motivation](imgs/fig-motivation.png)
 
 ## 📁 Repository Structure
 
 ```
 .
-├── balanced_mse.py          # Implementation of balanced MSE loss functions
 ├── downstream_train.py      # Training script for downstream tasks
 ├── main.py                  # Main entry point for the training pipeline
 ├── model.py                 # GNN model architecture definitions
 ├── requirements.txt         # Python dependencies
 ├── sampling.py              # Graph sampling utilities
-├── sgrl_models.py           # Self-supervised graph contrastive learning models
-├── sgrl_train.py            # Training script for contrastive learning
+├── layer.py                 # Gnn+ model
+├── gpslayer.py              # GPS attention
+├── plot.py                  # Distribution maps of ground capacitance and coupling capacitance
 ├── sram_dataset.py          # Dataset loading and preprocessing
 └── utils.py                 # Utility functions
 ```
@@ -70,12 +61,11 @@ CircuitGCL addresses two major challenges in parasitic estimation:
 
 ```bash
 # Clone the repository
-git clone https://github.com/username/CircuitGCL.git
-cd CircuitGCL
+git clone https://github.com/stomlvforever/RCG.git
 
 # Create and activate a conda environment
-conda create -n circuitgcl python=3.10
-conda activate circuitgcl
+conda create -n RCG python=3.10
+conda activate RCG
 
 # Install dependencies
 pip install -r requirements.txt
@@ -87,19 +77,19 @@ pip install -r requirements.txt
 
 #### Dataset Download Instructions
 
-The datasets used for training and testing CircuitGCL are available for download via the following links. You can use `curl` to directly download these files from the provided URLs.
+The datasets used for training and testing RCG are available for download via the following links. You can use `curl` to directly download these files from the provided URLs.
 
 ##### List of Datasets
 
-| Dataset Name    | Description                          | Download Link                                                                              |
-| --------------- | ------------------------------------ | ------------------------------------------------------------------------------------------ |
-| SSRAM           | Static Random Access Memory dataset  | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/ssram.pt)           |
-| DIGITAL_CLK_GEN | Digital Clock Generator dataset      | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/digtime.pt)         |
-| TIMING_CTRL     | Timing Control dataset               | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/timing_ctrl.pt)     |
-| ARRAY_128_32    | Array with dimensions 128x32 dataset | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/array_128_32_8t.pt) |
-| ULTRA8T         | Ultra 8 Transistor dataset           | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/ultra8t.pt)         |
-| SANDWICH-RAM    | Sandwich RAM dataset                 | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/sandwich.pt)        |
-| SP8192W         | Specialized 8192 Width dataset       | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/sp8192w.pt)         |
+| Split | Dataset Name    | Description                          | Download Link                                                                              |
+| ---------------|--------------- | ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Train.&Val.|SSRAM           | Static Random Access Memory dataset  | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/ssram.pt)           |
+| Test|DIGITAL_CLK_GEN | Digital Clock Generator dataset      | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/digtime.pt)         |
+| |TIMING_CTRL     | Timing Control dataset               | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/timing_ctrl.pt)     |
+| |ARRAY_128_32    | Array with dimensions 128x32 dataset | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/array_128_32_8t.pt) |
+| |ULTRA8T         | Ultra 8 Transistor dataset           | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/ultra8t.pt)         |
+| |SANDWICH-RAM    | Sandwich RAM dataset                 | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/sandwich.pt)        |
+| |SP8192W         | Specialized 8192 Width dataset       | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/sp8192w.pt)         |
 
 ##### Using `curl` to Download
 
@@ -115,20 +105,21 @@ For example, to download the SSRAM dataset, you would run:
 curl -O https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/ssram.pt
 ```
 
-Replace `<download_link>` with the appropriate URL from the table above.
+替换 `<download_link>` with the appropriate URL from the table above.
 
 ##### Dataset Statistics
 
 Below is a summary of the statistics for each dataset as used in our experiments:
 
-| Split       | Dataset         | N    | NE    | #Links |
-| ----------- | --------------- | ---- | ----- | ------ |
-| Train.&Val. | SSRAM           | 87K  | 134K  | 131K   |
-| Test        | DIGITAL_CLK_GEN | 17K  | 36K   | 4K     |
-|             | TIMING_CTRL     | 18K  | 44K   | 5K     |
-|             | ARRAY_128_32    | 144K | 352K  | 110K   |
-|             | ULTRA8T         | 3.5M | 13.4M | 166K   |
-|             | SANDWICH-RAM    | 4.3M | 13.3M | 154K   |
+| Dataset   | Nodes         |               |        | Topological Edges |         | Labeled Edges          |               |               |          |
+|-----------|---------------|---------------|--------|-------------------|---------|------------------------|---------------|---------------|----------|
+|           | Net           | Device        | Pin    | Device-Pin        | Pin-Net | C<sub>p2n</sub>        | C<sub>p2p</sub> | C<sub>n2n</sub> | R<sub>eff</sub> |
+| digtime   | 1.05K         | 4.13K         | 12.4K  | 12.4K             | 5.77K   | 10.43K                 | 22.26K        | 0.94K         | 99.84K   |
+| timectrl  | 0.67K         | 4.38K         | 13.1K  | 13.1K             | 9.04K   | 15.1K                  | 17.4K         | 1.38K         | 99.99K   |
+| sarray    | 12.6K         | 32.8K         | 98.3K  | 98.3K             | 77.8K   | 158.9K                 | 176.6K        | 24.8K         | 99.71K   |
+| ssram     | 19.9K         | 57.4K         | 172.3K | 172.3K            | 134.1K  | 277.8K                 | 288.6K        | 58.5K         | 69.26K   |
+| ultra     | 0.86M         | 2.33M         | 6.97M  | 6.97M             | 5.49M   | 12.14M                 | 14.22M        | 1.87M         | 0.83M    |
+| sandwich  | 1.15M         | 2.65M         | 7.94M  | 7.94M             | 6.24M   | 12.66M                 | 16.26M        | 2.33M         | 1.0M     |
 
 Note: The number of nodes (N), edges (NE), and links (#Links) are provided for reference to give an idea of the scale and complexity of each dataset.
 
@@ -161,91 +152,77 @@ python main.py --dataset ssram+digtime+timing_ctrl+array_128_32_8t --task classi
 python main.py --dataset ssram+digtime+timing_ctrl+array_128_32_8t --task regression --task_level edge --regress_loss gai --batch_size 128
 ```
 
-#### With Contrastive Learning
-
-```bash
-# Enable contrastive learning pre-training
-python main.py --dataset ssram+digtime+timing_ctrl+array_128_32_8t --task classification --sgrl 1 --cl_epochs 800
-```
 
 ### Key Arguments
 
-| Argument         | Description                          | Options                                                   |
-| ---------------- | ------------------------------------ | --------------------------------------------------------- |
-| `--task`         | Task type                            | `classification`, `regression`                            |
-| `--task_level`   | Prediction level                     | `node`, `edge`                                            |
-| `--dataset`      | Names of datasets (separated by `+`) | e.g., `ssram+digtime`                                     |
-| `--model`        | GNN model architecture               | `clustergcn`, `resgatedgcn`, `gat`, `gcn`, `sage`, `gine` |
-| `--sgrl`         | Enable contrastive learning          | `0` (disabled), `1` (enabled)                             |
-| `--regress_loss` | Regression loss function             | `mse`, `gai`, `bmc`, `bni`, `lds`                         |
-| `--class_loss`   | Classification loss function         | `bsmCE`, `focal`, `cross_entropy`                         |
-| `--batch_size`   | Training batch size                  | Integer (default: `128`)                                  |
-| `--cl_epochs`    | Contrastive learning epochs          | Integer (default: `500`)                                  |
+| Argument          | Description                          | Options                                                   |
+| ----------------  | ------------------------------------ | --------------------------------------------------------- |
+| `--task`          | Task type                            | `classification`, `regression`                            |
+| `--task_level`    | Prediction level                     | `node`, `edge`                                            |
+| `--dataset`       | Names of datasets (separated by `+`) | e.g., `ssram+digtime`                                     |
+| `--model`         | GNN model architecture               | `gpsattention`                                            |
+| `--local_gnn_type`| gnn<sup>+</sup> model                          | `CustomGatedGCN`,`CustomGCNConv`,`CustomGINEConv`         |
+| `--regress_loss`  | Regression loss function             | `mse`                                                     |
+| `--class_loss`    | Classification loss function         |`cross_entropy`                                            |
+| `--batch_size`    | Training batch size                  | Integer (default: `128`)                                  |
 
 ## 🧠 Framework Components
+### Benchmark
 
-### 1. Self-supervised Graph Contrastive Learning (SGRL)
+### Gnn<sup>+</sup> model
 
-Our SGRL module enables better transferability across different circuit designs by learning circuit structure representations without relying on parasitic labels. Key features include:
-
-- Structure-aware graph augmentation strategies
-- Circuit-specific positive/negative sampling techniques
-- Efficient contrastive objective functions
-
-### 2. Graph Neural Network Architectures
-
-Multiple state-of-the-art GNN architectures are supported:
-
-- **Graph Convolutional Network (GCN)** - For basic graph representation learning
-- **GraphSAGE** - For efficient neighborhood sampling and aggregation
-- **Graph Attention Network (GAT)** - For attention-based message passing
-- **Residual Gated GCN** - For complex edge-conditioned convolutions
-- **Graph Isomorphism Network with Edge features (GINE)** - For enhanced expressivity
-- **Cluster GCN** - For efficient training on large circuit graphs
-
-### 3. Label Rebalancing Strategies
-
-Several advanced techniques are implemented to handle the severely imbalanced distribution of parasitic capacitance values:
-
-- **Generative-based Adaptive Importance Loss (GAI)** - Our proposed approach that adaptively weights samples based on frequency distribution
-- **Balanced MSE Loss** - Reweights the loss based on inverse sample frequency
-- **Balanced Negative Sampling** - Improves representation learning for rare parasitic values
-- **Local Distribution Smoothing (LDS)** - Reduces distribution bias during training
-- **Focal Loss** - Focuses on hard-to-predict parasitic values
 
 ## 📊 Results
 
-Our approach achieves superior performance compared to existing methods in both cross-circuit parasitic prediction accuracy and handling of imbalanced parasitic distributions.
+Our method demonstrates excellent performance in edge tasks and exhibits better robustness in handling some challenging datasets in node tasks.
 
-### Label Distribution Analysis
 
-![Label Distribution](imgs/train_dataset_label_distributionl.png)
+### Complete Performance Comparison Table
+#### Node Task
+##### Node Regression Performance Comparison across Different Datasets
 
-### Performance Improvements
+| Dataset       | Train (MAE ↓) | Train (R² ↑) | digtime (MAE ↓) | digtime (R² ↑) | array (MAE ↓) | array (R² ↑) | ultra (MAE ↓) | ultra (R² ↑) | sandwich (MAE ↓) | sandwich (R² ↑) |
+|---------------|---------------|--------------|-----------------|----------------|---------------|--------------|---------------|--------------|------------------|-----------------|
+| **GCN<sup>+</sup>**      | 0.0391 (+4.8%) | 0.9233 (-1.1%) | **0.0828 (-32.5%)** | **0.5577 (+68.3%)** | **0.0992 (+8.5%)** | 0.6655 (-10.3%) | 0.1238 (-11.2%) | 0.6759 (+13.2%) | 0.1821 (-21.0%) | **0.5559 (+46.3%)** |
+| **GCN**       | **0.0373** | **0.9344** | 0.1227 | 0.3313 | 0.0914 | **0.7423** | 0.1395 | 0.597 | 0.2306 | 0.3800 |
+| **GatedGCN<sup>+</sup>** | 0.0457 (+4.3%) | 0.9075 (-1.5%) | 0.1089 (-62.4%) | 0.4629 (+129.7%) | 0.0978 (-55.4%) | 0.6562 (+109.1%) | 0.1184 (-11.6%) | 0.6889 (-3.3%) | 0.2532 (-42.0%) | 0.3056 (+124.7%) |
+| **GatedGCN**  | 0.0438 | 0.9217 | 0.2896 | -1.5552 | 0.2194 | 0.3138 | 0.134 | **0.7127** | 0.4369 | -1.2375 |
+| **GIN<sup>+</sup>**      | 0.0383 (+3.8%) | 0.9271 (-0.7%) | 0.0885 (-4.3%) | 0.5165 (+35.0%) | 0.1166 (-1.1%) | 0.7337 (+13.6%) | 0.1245 (+22.9%) | 0.6508 (-14.4%) | 0.2535 (+11.7%) | 0.2734 (+105.2%) |
+| **GIN**       | 0.0369 | 0.933 | 0.0925 | 0.3825 | 0.1179 | 0.6459 | **0.1013** | 0.7604 | 0.2270 | -5.2274 |
 
-![MSE Gain Across Test Datasets](imgs//test_dataset_mse_gain.png)
+##### Node Classification Performance Comparison across Different Datasets
 
-### Comprehensive Error Comparison
+| Model       | Train (Acc) | Train (F1) | timectrl (Acc) | timectrl (F1) | array (Acc) | array (F1) | ultra (Acc) | ultra (F1) | sandwich (Acc) | sandwich (F1) |
+|-------------|------------|------------|----------------|---------------|------------|------------|-------------|------------|----------------|---------------|
+| **GCN<sup>+</sup>**    | 0.7629 (-0.2%) | 0.6206 (-0.3%) | 0.6651 (-0.5%) | 0.4398 (+2.5%) | 0.7024 (-0.9%) | 0.4773 (-2.0%) | 0.7312 (+0.6%) | 0.4387 (-0.6%) | 0.7008 (-1.5%) | 0.4004 (-0.7%) |
+| **GCN**     | **0.7643** | **0.6229** | 0.6683 | 0.4289 | 0.7088 | 0.4872 | 0.7269 | 0.4415 | 0.7119 | **0.4033** |
+| **GatedGCN<sup>+</sup>** | **0.7674 (+0.6%)** | **0.6614 (+6.8%)** | 0.5566 (+97.3%) | 0.2221 (-11.1%) | 0.7153 (+54.4%) | 0.3786 (+0.0%) | 0.7285 (+0.8%) | 0.4397 (+0.4%) | **0.7279 (+4.1%)** | 0.3225 (-14.4%) |
+| **GatedGCN** | 0.7632 | 0.6195 | 0.2821 | 0.2498 | 0.4634 | 0.3786 | 0.7227 | 0.4378 | 0.6994 | 0.3768 |
+| **GIN<sup>+</sup>**    | 0.7623 (-0.02%) | 0.6268 (+1.1%) | 0.6937 (-6.8%) | 0.4155 (-8.3%) | 0.6603 (-8.5%) | 0.3758 (-24.6%) | **0.7325 (+65.0%)** | 0.4383 (-1.2%) | 0.7072 (-0.2%) | 0.3295 (-15.0%) |
+| **GIN**     | 0.7625 | 0.6199 | **0.7445** | **0.4533** | **0.7218** | **0.4986** | 0.4439 | **0.4439** | 0.7088 | 0.3878 |
 
-Our comprehensive experiments demonstrate significant improvements over state-of-the-art methods:
+#### Edge Task
+##### Edge Classification Performance Comparison across Different Datasets
 
-- Up to **42.48%** reduction in MSE
-- Up to **41.08%** improvement in R²
-- Consistently better performance across different circuit designs
+| Model       | Train (Acc) | Train (F1) | digtime (Acc) | digtime (F1) | timectrl (Acc) | timectrl (F1) | ultra (Acc) | ultra (F1) | sandwich (Acc) | sandwich (F1) |
+|-------------|------------|------------|--------------|--------------|---------------|---------------|-------------|------------|----------------|---------------|
+| **GCN<sup>+</sup>**    | 0.7271 (-3.5%) | 0.6090 (-7.0%) | **0.6958 (+11.6%)** | 0.4618 (+8.2%) | **0.7048 (+19.4%)** | 0.5563 (+21.2%) | 0.7112 (-0.8%) | 0.5516 (-0.4%) | **0.6186 (+1.0%)** | 0.4355 (+1.0%) |
+| **GCN**     | 0.7538 | 0.6547 | 0.6233 | 0.4268 | 0.5902 | 0.4587 | **0.7171** | 0.5540 | 0.6129 | 0.4314 |
+| **GatedGCN<sup>+</sup>** | 0.7559 (-0.3%) | 0.6444 (-7.0%) | 0.6084 (+10.0%) | 0.4383 (+5.0%) | 0.6997 (+0.5%) | 0.5968 (-5.0%) | 0.6974 (+3.2%) | 0.5185 (-8.0%) | 0.5842 (+4.0%) | 0.3941 (-4.4%) |
+| **GatedGCN** | 0.7580 | 0.6573 | 0.5532 | 0.4178 | 0.6961 | **0.6275** | 0.6759 | **0.5612** | 0.5614 | 0.4124 |
+| **GIN+**    | 0.7512 (-2.4%) | 0.6383 (-5.1%) | 0.6269 (+3.2%) | **0.4715 (+18.8%)** | 0.6412 (+5.1%) | 0.4530 (+1.8%) | 0.6779 (-1.8%) | 0.4839 (-13.7%) | 0.5924 (+1.8%) | **0.4437 (+4.0%)** |
+| **GIN**     | **0.7699** | **0.6726** | 0.6073 | 0.3969 | 0.6103 | 0.4452 | 0.6902 | 0.5609 | 0.5822 | 0.4269 |
 
-#### Complete Performance Comparison Table
+##### Edge Regression Performance Comparison across Different Datasets
 
-| Testset              | timectrl  |            |            |            | array     |            |            |            | ultra     |            |            |            | sandwich  |            |            |            |
-| -------------------- | --------- | ---------- | ---------- | ---------- | --------- | ---------- | ---------- | ---------- | --------- | ---------- | ---------- | ---------- | --------- | ---------- | ---------- | ---------- |
-| **Metric**           | **Loss↓** | **MAE↓**   | **MSE↓**   | **R²↑**    | **Loss↓** | **MAE↓**   | **MSE↓**   | **R²↑**    | **Loss↓** | **MAE↓**   | **MSE↓**   | **R²↑**    | **Loss↓** | **MAE↓**   | **MSE↓**   | **R²↑**    |
-| ParaGraph            | 0.0153    | 0.0914     | 0.0153     | 0.5250     | 0.0115    | 0.0788     | 0.0115     | 0.4252     | 0.0175    | 0.0937     | 0.0175     | 0.3200     | 0.0223    | 0.1087     | 0.0223     | 0.3389     |
-| CircuitGPS           | 0.0105    | 0.0742     | 0.0105     | 0.6911     | 0.0108    | 0.0701     | 0.0108     | 0.4576     | 0.0158    | 0.0818     | 0.0158     | 0.3845     | 0.0225    | 0.1039     | 0.0225     | 0.3326     |
-| DLPL-Cap             | 0.0093    | 0.0701     | 0.0093     | 0.7056     | 0.0123    | 0.0806     | 0.0123     | 0.3853     | 0.0160    | 0.0813     | 0.0160     | 0.3704     | 0.0214    | 0.1012     | 0.0214     | 0.3622     |
-| CircuitGCL (MSE)     | 0.0118    | 0.0868     | 0.0118     | 0.6521     | 0.0093    | 0.0671     | 0.0093     | 0.5350     | 0.0144    | 0.0794     | **0.0144** | **0.4398** | 0.0193    | 0.0992     | 0.0193     | 0.4280     |
-| CircuitGCL (BMC)     | 71.626    | 0.0628     | **0.0088** | **0.7407** | 74.313    | **0.0650** | 0.0092     | 0.5418     | 117.73    | 0.0771     | 0.0145     | 0.4350     | 152.34    | 0.0938     | 0.0188     | 0.4422     |
-| CircuitGCL (GAI)     | 0.0091    | **0.0610** | 0.0091     | 0.7300     | 0.0089    | 0.0667     | **0.0089** | **0.5556** | 0.0145    | **0.0762** | 0.0145     | 0.4358     | 0.0187    | **0.0935** | **0.0187** | **0.4445** |
-| **Max. Improvement** | -         | **33.26%** | **42.48%** | **41.08%** | -         | **19.35%** | **27.64%** | **44.20%** | -         | **18.68%** | **17.71%** | **37.44%** | -         | **14.98%** | **16.89%** | **33.64%** |
-
+| Model       | Train (MAE) | Train (R²) | timectrl (MAE) | timectrl (R²) | array (MAE) | array (R²) | ultra (MAE) | ultra (R²) | sandwich (MAE) | sandwich (R²) |
+|-------------|------------|------------|---------------|---------------|------------|------------|-------------|------------|----------------|---------------|
+| **GCN<sup>+</sup>**    | 0.0667 (+3.9%) | 0.5871 (-4.4%) | 0.0728 (+1.0%) | **0.6974 (+2.0%)** | **0.0668 (-15.7%)** | **0.5434 (+24.3%)** | 0.0797 (-1.5%) | 0.4305 (+1.8%) | 0.0965 (-3.2%) | 0.4453 (+7.5%) |
+| **GCN**     | 0.0642 | 0.6144 | 0.0721 | 0.6837 | 0.0792 | 0.4371 | 0.0810 | 0.4228 | 0.0997 | 0.4138 |
+| **GatedGCN<sup>+</sup>** | **0.0601 (+5.3%)** | 0.6368 (-4.2%) | 0.0682 (-8.9%) | 0.6772 (+10.1%) | 0.0808 (-2.6%) | 0.4037 (+32.8%) | 0.0808 (-0.4%) | 0.3880 (-3.6%) | 0.0976 (-0.3%) | 0.4220 (+0.3%) |
+| **GatedGCN** | 0.0571 | **0.6650** | 0.0749 | 0.6148 | 0.0830 | 0.3039 | 0.0811 | 0.4027 | 0.0979 | 0.4208 |
+| **GIN<sup>+</sup>**    | 0.0571 (-2.4%) | 0.6558 (+1.0%) | **0.0681 (-2.0%)** | 0.6882 (+1.1%) | 0.0861 (-5.3%) | 0.3800 (+16.8%) | **0.0779 (-0.8%)** | **0.4421 (+5.2%)** | 0.0990 (+2.0%) | 0.4215 (-1.6%) |
+| **GIN**     | 0.0585 | 0.6493 | 0.0695 | 0.6806 | 0.0909 | 0.3253 | 0.0785 | 0.4204 | **0.0970** | **0.4285** |
 ## 📝 Citation
 
 If you find this work useful for your research, please consider citing:
