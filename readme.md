@@ -34,10 +34,6 @@ Our framework supports four key parasitic estimation tasks:
 The overall process of circuit transformation into a diagram is as follows:
 ![Framework Workflow](imgs/Fig_3_V2.png)
 
-GNN<sup>+</sup> is the strong baseline applied to the benchmarks, with the architecture illustrated as pictures:
-<div align="center">
-  <img src="imgs/gnn+.png" width="50%">
-</div>
 
 ## 📁 Repository Structure
 
@@ -196,6 +192,11 @@ Due to the wide distribution range of the capacitance, we limit the values to be
 
 
 ### Gnn<sup>+</sup> model
+
+GNN<sup>+</sup> is the strong baseline applied to the benchmarks, with the architecture illustrated as pictures:
+<div align="center">
+  <img src="imgs/gnn+.png" width="50%">
+</div>
 
 ## 📊 Results
 
