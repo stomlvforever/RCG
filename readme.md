@@ -133,10 +133,10 @@ datasets/raw/
 
 ```bash
 # For node classification task
-python main.py --dataset ssram+digtime+timing_ctrl+array_128_32_8t --task classification --task_level node --batch_size 128
+python main.py --dataset ssram+digtime+timing_ctrl+array_128_32_8t --model gps_attention --task classification --task_level node --batch_size 128
 
 # For edge regression task with GAI loss
-python main.py --dataset ssram+digtime+timing_ctrl+array_128_32_8t --task regression --task_level edge --batch_size 128
+python main.py --dataset ssram+digtime+timing_ctrl+array_128_32_8t --model gps_attention --task regression --task_level edge --batch_size 128
 ```
 
 
