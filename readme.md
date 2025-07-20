@@ -111,14 +111,15 @@ curl -O https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/ssram.pt
 
 Below is a summary of the statistics for each dataset as used in our experiments:
 
-| Split       | Dataset         | N    | NE    | #Links |
-| ----------- | --------------- | ---- | ----- | ------ |
-| Train.&Val. | SSRAM           | 87K  | 134K  | 131K   |
-| Test        | DIGITAL_CLK_GEN | 17K  | 36K   | 4K     |
-|             | TIMING_CTRL     | 18K  | 44K   | 5K     |
-|             | ARRAY_128_32    | 144K | 352K  | 110K   |
-|             | ULTRA8T         | 3.5M | 13.4M | 166K   |
-|             | SANDWICH-RAM    | 4.3M | 13.3M | 154K   |
+| Dataset   | Nodes         |               |        | Topological Edges |         | Labeled Edges          |               |               |          |
+|-----------|---------------|---------------|--------|-------------------|---------|------------------------|---------------|---------------|----------|
+|           | Net           | Device        | Pin    | Device-Pin        | Pin-Net | C<sub>p2n</sub>        | C<sub>p2p</sub> | C<sub>n2n</sub> | R<sub>eff</sub> |
+| digtime   | 1.05K         | 4.13K         | 12.4K  | 12.4K             | 5.77K   | 10.43K                 | 22.26K        | 0.94K         | 99.84K   |
+| timectrl  | 0.67K         | 4.38K         | 13.1K  | 13.1K             | 9.04K   | 15.1K                  | 17.4K         | 1.38K         | 99.99K   |
+| sarray    | 12.6K         | 32.8K         | 98.3K  | 98.3K             | 77.8K   | 158.9K                 | 176.6K        | 24.8K         | 99.71K   |
+| ssram     | 19.9K         | 57.4K         | 172.3K | 172.3K            | 134.1K  | 277.8K                 | 288.6K        | 58.5K         | 69.26K   |
+| ultra     | 0.86M         | 2.33M         | 6.97M  | 6.97M             | 5.49M   | 12.14M                 | 14.22M        | 1.87M         | 0.83M    |
+| sandwich  | 1.15M         | 2.65M         | 7.94M  | 7.94M             | 6.24M   | 12.66M                 | 16.26M        | 2.33M         | 1.0M     |
 
 Note: The number of nodes (N), edges (NE), and links (#Links) are provided for reference to give an idea of the scale and complexity of each dataset.
 
