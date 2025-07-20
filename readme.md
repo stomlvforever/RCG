@@ -31,8 +31,13 @@ Our framework supports four key parasitic estimation tasks:
 - Coupling Capacitance Regression/Classification
 - Ground Capacitance Regression/Classification:
 
-![Framework Workflow](imgs/Fig_3_V2.pdf)
+The overall process of circuit transformation into a diagram is as follows:
+![Framework Workflow](imgs/Fig_3_V2.png)
 
+GNN<sup>+</sup> is the strong baseline applied to the benchmarks, with the architecture illustrated as pictures:
+<div align="center">
+  <img src="imgs/gnn+.png" width="50%">
+</div>
 
 ## 📁 Repository Structure
 
@@ -81,49 +86,31 @@ The datasets used for training and testing RCG are available for download via th
 
 ##### List of Datasets
 
-| Split | Dataset Name    | Description                          | Download Link                                                                              |
-| ---------------|--------------- | ------------------------------------ | ------------------------------------------------------------------------------------------ |
-| Train.&Val.|SSRAM           | Static Random Access Memory dataset  | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/ssram.pt)           |
-| Test|DIGITAL_CLK_GEN | Digital Clock Generator dataset      | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/digtime.pt)         |
-| |TIMING_CTRL     | Timing Control dataset               | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/timing_ctrl.pt)     |
-| |ARRAY_128_32    | Array with dimensions 128x32 dataset | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/array_128_32_8t.pt) |
-| |ULTRA8T         | Ultra 8 Transistor dataset           | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/ultra8t.pt)         |
-| |SANDWICH-RAM    | Sandwich RAM dataset                 | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/sandwich.pt)        |
-| |SP8192W         | Specialized 8192 Width dataset       | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/sp8192w.pt)         |
+| Dataset Name    | Description                          | Download Link                                                                              |
+| --------------- | ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| SSRAM           | Static Random Access Memory dataset  | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/ssram.pt)           |
+| DIGITAL_CLK_GEN | Digital Clock Generator dataset      | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/digtime.pt)         |
+| TIMING_CTRL     | Timing Control dataset               | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/timing_ctrl.pt)     |
+| ARRAY_128_32    | Array with dimensions 128x32 dataset | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/array_128_32_8t.pt) |
+| ULTRA8T         | Ultra 8 Transistor dataset           | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/ultra8t.pt)         |
+| SANDWICH-RAM    | Sandwich RAM dataset                 | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/sandwich.pt)        |
+| SP8192W         | Specialized 8192 Width dataset       | [Download](https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/sp8192w.pt)         |
 
-##### Using `curl` to Download
-
-To download any of the datasets using `curl`, you can use the following command format in your terminal:
-
-```bash
-curl -O <download_link>
-```
-
-For example, to download the SSRAM dataset, you would run:
-
-```bash
-curl -O https://circuitgcl-sram.s3.ap-southeast-2.amazonaws.com/raw/ssram.pt
-```
-
-替换 `<download_link>` with the appropriate URL from the table above.
 
 ##### Dataset Statistics
 
 Below is a summary of the statistics for each dataset as used in our experiments:
 
-| Dataset   | Nodes         |               |        | Topological Edges |         | Labeled Edges          |               |               |          |
-|-----------|---------------|---------------|--------|-------------------|---------|------------------------|---------------|---------------|----------|
-|           | Net           | Device        | Pin    | Device-Pin        | Pin-Net | C<sub>p2n</sub>        | C<sub>p2p</sub> | C<sub>n2n</sub> | R<sub>eff</sub> |
-| digtime   | 1.05K         | 4.13K         | 12.4K  | 12.4K             | 5.77K   | 10.43K                 | 22.26K        | 0.94K         | 99.84K   |
-| timectrl  | 0.67K         | 4.38K         | 13.1K  | 13.1K             | 9.04K   | 15.1K                  | 17.4K         | 1.38K         | 99.99K   |
-| sarray    | 12.6K         | 32.8K         | 98.3K  | 98.3K             | 77.8K   | 158.9K                 | 176.6K        | 24.8K         | 99.71K   |
-| ssram     | 19.9K         | 57.4K         | 172.3K | 172.3K            | 134.1K  | 277.8K                 | 288.6K        | 58.5K         | 69.26K   |
-| ultra     | 0.86M         | 2.33M         | 6.97M  | 6.97M             | 5.49M   | 12.14M                 | 14.22M        | 1.87M         | 0.83M    |
-| sandwich  | 1.15M         | 2.65M         | 7.94M  | 7.94M             | 6.24M   | 12.66M                 | 16.26M        | 2.33M         | 1.0M     |
+|Split| Dataset   | Nodes         |               |        | Topological Edges |         | Labeled Edges          |               |               |          |
+|-----------|-----------|---------------|---------------|--------|-------------------|---------|------------------------|---------------|---------------|----------|
+||           | Net           | Device        | Pin    | Device-Pin        | Pin-Net | C<sub>p2n</sub>        | C<sub>p2p</sub> | C<sub>n2n</sub> | R<sub>eff</sub> |
+| Train.&Val. |ssram     | 19.9K         | 57.4K         | 172.3K | 172.3K            | 134.1K  | 277.8K                 | 288.6K        | 58.5K         | 69.26K   |
+| Test|digtime   | 1.05K         | 4.13K         | 12.4K  | 12.4K             | 5.77K   | 10.43K                 | 22.26K        | 0.94K         | 99.84K   |
+| |timectrl  | 0.67K         | 4.38K         | 13.1K  | 13.1K             | 9.04K   | 15.1K                  | 17.4K         | 1.38K         | 99.99K   |
+| |sarray    | 12.6K         | 32.8K         | 98.3K  | 98.3K             | 77.8K   | 158.9K                 | 176.6K        | 24.8K         | 99.71K   |
+| |ultra     | 0.86M         | 2.33M         | 6.97M  | 6.97M             | 5.49M   | 12.14M                 | 14.22M        | 1.87M         | 0.83M    |
+| |sandwich  | 1.15M         | 2.65M         | 7.94M  | 7.94M             | 6.24M   | 12.66M                 | 16.26M        | 2.33M         | 1.0M     |
 
-Note: The number of nodes (N), edges (NE), and links (#Links) are provided for reference to give an idea of the scale and complexity of each dataset.
-
----
 
 #### Dataset Usage
 
@@ -149,7 +136,7 @@ datasets/raw/
 python main.py --dataset ssram+digtime+timing_ctrl+array_128_32_8t --task classification --task_level node --batch_size 128
 
 # For edge regression task with GAI loss
-python main.py --dataset ssram+digtime+timing_ctrl+array_128_32_8t --task regression --task_level edge --regress_loss gai --batch_size 128
+python main.py --dataset ssram+digtime+timing_ctrl+array_128_32_8t --task regression --task_level edge --batch_size 128
 ```
 
 
@@ -161,16 +148,54 @@ python main.py --dataset ssram+digtime+timing_ctrl+array_128_32_8t --task regres
 | `--task_level`    | Prediction level                     | `node`, `edge`                                            |
 | `--dataset`       | Names of datasets (separated by `+`) | e.g., `ssram+digtime`                                     |
 | `--model`         | GNN model architecture               | `gpsattention`                                            |
-| `--local_gnn_type`| gnn<sup>+</sup> model                          | `CustomGatedGCN`,`CustomGCNConv`,`CustomGINEConv`         |
+| `--local_gnn_type`| gnn<sup>+</sup> model                | `CustomGatedGCN`,`CustomGCNConv`,`CustomGINEConv`         |
 | `--regress_loss`  | Regression loss function             | `mse`                                                     |
 | `--class_loss`    | Classification loss function         |`cross_entropy`                                            |
 | `--batch_size`    | Training batch size                  | Integer (default: `128`)                                  |
 
 ## 🧠 Framework Components
 ### Benchmark
+Due to the wide distribution range of the capacitance, we limit the values to be processed within a certain range and normalize them to be distributed within the range of 0 to 1. The capacitance distribution range is as follows：
+#### Edge Capacitance Distributions
+<table>
+  <tr>
+    <td align="center"><img src="imgs/edge_label_dist_ssram.png" width="150"></td>
+    <td align="center"><img src="imgs/edge_label_dist_digtime.png" width="150"></td>
+    <td align="center"><img src="imgs/edge_label_dist_array_128_32_8t.png" width="150"></td>
+    <td align="center"><img src="imgs/edge_label_dist_timing_ctrl.png" width="150"></td>
+    <td align="center"><img src="imgs/edge_label_dist_ultra8t.png" width="150"></td>
+    <td align="center"><img src="imgs/edge_label_dist_sandwich.png" width="150"></td>
+  </tr>
+  <tr>
+    <td align="center">ssram</td>
+    <td align="center">digtime</td>
+    <td align="center">array_128_32_8t</td>
+    <td align="center">timing_ctrl</td>
+    <td align="center">ultra8t</td>
+    <td align="center">sandwich</td>
+</table>
+
+#### Node Capacitance Distributions 
+<table>
+  <tr>
+    <td align="center"><img src="imgs/node_label_dist_ssram.png" width="150"></td>
+    <td align="center"><img src="imgs/node_label_dist_digtime.png" width="150"></td>
+    <td align="center"><img src="imgs/node_label_dist_array_128_32_8t.png" width="150"></td>
+    <td align="center"><img src="imgs/node_label_dist_timing_ctrl.png" width="150"></td>
+    <td align="center"><img src="imgs/node_label_dist_ultra8t.png" width="150"></td>
+    <td align="center"><img src="imgs/node_label_dist_sandwich.png" width="150"></td>
+  </tr>
+  <tr>
+    <td align="center">ssram</td>
+    <td align="center">digtime</td>
+    <td align="center">array_128_32_8t</td>
+    <td align="center">timing_ctrl</td>
+    <td align="center">ultra8t</td>
+    <td align="center">sandwich</td>
+</table>
+
 
 ### Gnn<sup>+</sup> model
-
 
 ## 📊 Results
 
@@ -223,19 +248,8 @@ Our method demonstrates excellent performance in edge tasks and exhibits better 
 | **GatedGCN** | 0.0571 | **0.6650** | 0.0749 | 0.6148 | 0.0830 | 0.3039 | 0.0811 | 0.4027 | 0.0979 | 0.4208 |
 | **GIN<sup>+</sup>**    | 0.0571 (-2.4%) | 0.6558 (+1.0%) | **0.0681 (-2.0%)** | 0.6882 (+1.1%) | 0.0861 (-5.3%) | 0.3800 (+16.8%) | **0.0779 (-0.8%)** | **0.4421 (+5.2%)** | 0.0990 (+2.0%) | 0.4215 (-1.6%) |
 | **GIN**     | 0.0585 | 0.6493 | 0.0695 | 0.6806 | 0.0909 | 0.3253 | 0.0785 | 0.4204 | **0.0970** | **0.4285** |
-## 📝 Citation
 
-If you find this work useful for your research, please consider citing:
 
-```bibtex
-@article{circuitgcl2025,
-  title={Transferable Parasitic Estimation via Graph Contrastive Learning and Label Rebalancing in AMS Circuits},
-  author={Author1 and Author2 and Author3},
-  journal={Conference/Journal Name},
-  year={2025},
-  publisher={Publisher}
-}
-```
 
 ## 📄 License
 
