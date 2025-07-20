@@ -8,18 +8,30 @@
 Official implementation of the paper "Transferable Parasitic Estimation via Graph Contrastive Learning and Label Rebalancing in AMS Circuits".
 
 ## 📑 Table of Contents
-
 - [Overview](#overview)
 - [Key Features](#key-features)
 - [Repository Structure](#repository-structure)
 - [Installation](#installation)
 - [Usage](#usage)
   - [Dataset Preparation](#dataset-preparation)
+    - [Dataset Download Instructions](#dataset-download-instructions)
+    - [Dataset Statistics](#dataset-statistics)
+    - [Dataset Usage](#dataset-usage)
   - [Model Training](#model-training)
-  - [Evaluation](#evaluation)
+    - [Basic Training](#basic-training)
+    - [Key Arguments](#key-arguments)
 - [Framework Components](#framework-components)
+  - [Benchmark](#benchmark)
+    - [Edge Capacitance Distributions](#edge-capacitance-distributions)
+    - [Node Capacitance Distributions](#node-capacitance-distributions)
+  - [Gnn+ Model](#gnn-model)
 - [Results](#results)
-- [Citation](#citation)
+  - [Node Task](#node-task)
+    - [Node Regression Performance](#node-regression-performance-comparison-across-different-datasets)
+    - [Node Classification Performance](#node-classification-performance-comparison-across-different-datasets)
+  - [Edge Task](#edge-task)
+    - [Edge Classification Performance](#edge-classification-performance-comparison-across-different-datasets)
+    - [Edge Regression Performance](#edge-regression-performance-comparison-across-different-datasets)
 - [License](#license)
 
 ## 🔍 Overview
