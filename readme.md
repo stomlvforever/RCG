@@ -213,7 +213,7 @@ GNN<sup>+</sup> is the strong baseline applied to the benchmarks, with the archi
 ## 📊 Results
 
 Our method demonstrates excellent performance in edge tasks and exhibits better robustness in handling some challenging datasets in node tasks.
-
+The specific data is provided by the following table.
 
 ### Complete Performance Comparison Table
 #### Node Task
