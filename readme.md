@@ -169,12 +169,12 @@ Due to the wide distribution range of the capacitance, we limit the values to be
 #### Edge Capacitance Distributions
 <table>
   <tr>
-    <td align="center"><img src="imgs/edge_label_dist_ssram.png" width="150"></td>
-    <td align="center"><img src="imgs/edge_label_dist_digtime.png" width="150"></td>
-    <td align="center"><img src="imgs/edge_label_dist_array_128_32_8t.png" width="150"></td>
-    <td align="center"><img src="imgs/edge_label_dist_timing_ctrl.png" width="150"></td>
-    <td align="center"><img src="imgs/edge_label_dist_ultra8t.png" width="150"></td>
-    <td align="center"><img src="imgs/edge_label_dist_sandwich.png" width="150"></td>
+    <td align="center"><img src="imgs/edge_label_dist_ssram.png" width="150" height="100"></td>
+    <td align="center"><img src="imgs/edge_label_dist_digtime.png" width="150" height="100"></td>
+    <td align="center"><img src="imgs/edge_label_dist_array_128_32_8t.png" width="150" height="100"></td>
+    <td align="center"><img src="imgs/edge_label_dist_timing_ctrl.png" width="150" height="100"></td>
+    <td align="center"><img src="imgs/edge_label_dist_ultra8t.png" width="150" height="100"></td>
+    <td align="center"><img src="imgs/edge_label_dist_sandwich.png" width="150" height="100"></td>
   </tr>
   <tr>
     <td align="center">ssram</td>
@@ -188,12 +188,12 @@ Due to the wide distribution range of the capacitance, we limit the values to be
 #### Node Capacitance Distributions 
 <table>
   <tr>
-    <td align="center"><img src="imgs/node_label_dist_ssram.png" width="150"></td>
-    <td align="center"><img src="imgs/node_label_dist_digtime.png" width="150"></td>
-    <td align="center"><img src="imgs/node_label_dist_array_128_32_8t.png" width="150"></td>
-    <td align="center"><img src="imgs/node_label_dist_timing_ctrl.png" width="150"></td>
-    <td align="center"><img src="imgs/node_label_dist_ultra8t.png" width="150"></td>
-    <td align="center"><img src="imgs/node_label_dist_sandwich.png" width="150"></td>
+    <td align="center"><img src="imgs/node_label_dist_ssram.png" width="150" height="100"></td>
+    <td align="center"><img src="imgs/node_label_dist_digtime.png" width="150" height="100"></td>
+    <td align="center"><img src="imgs/node_label_dist_array_128_32_8t.png" width="150" height="100"></td>
+    <td align="center"><img src="imgs/node_label_dist_timing_ctrl.png" width="150" height="100"></td>
+    <td align="center"><img src="imgs/node_label_dist_ultra8t.png" width="150" height="100"></td>
+    <td align="center"><img src="imgs/node_label_dist_sandwich.png" width="150" height="100"></td>
   </tr>
   <tr>
     <td align="center">ssram</td>
