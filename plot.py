@@ -2,6 +2,8 @@ import torch
 import matplotlib
 matplotlib.use('Agg')     # 或者 'Qt5Agg'，取决于你的系统上装了哪个 GUI 库
 import matplotlib.pyplot as plt
+import numpy as np
+plt.rc("font",family='Nimbus Sans')
 
 def visualize_node_label_distribution(g, name, class_boundaries):
     """
@@ -114,3 +116,36 @@ def visualize_edge_label_distribution(g, name, class_boundaries):
     plt.close()
     
     return edge_label_c  # Return bucketed labels for further use if needed
+
+def plot_edge_label_distribution(edge_labels: np.ndarray, class_boundaries: np.ndarray):
+    """
+    Plots the distribution of edge label classes.
+    
+    Args:
+        edge_labels: 1D numpy array of normalized edge label values (floats in [0, 1]).
+        class_boundaries: 1D numpy array of boundaries, e.g. [0.2, 0.4, 0.6, 0.8].
+    """
+    # Bucketize into class indices
+    edge_label_c = np.digitize(edge_labels, class_boundaries, right=False)
+    
+    # Count occurrences per class
+    num_classes = len(class_boundaries) + 1
+    counts = np.bincount(edge_label_c, minlength=num_classes)
+    
+    # Prepare labels
+    class_labels = []
+    prev = 0.0
+    for b in class_boundaries:
+        class_labels.append(f"[{prev:.2f}, {b:.2f})")
+        prev = b
+    class_labels.append(f"[{prev:.2f}, 1.00]")
+    
+    # Plot
+    plt.figure()
+    plt.bar(range(num_classes), counts)
+    plt.xticks(range(num_classes), class_labels, rotation=45, ha='right')
+    plt.xlabel("Edge Label Class Range")
+    plt.ylabel("Number of Samples")
+    plt.title("Edge Label Class Distribution")
+    plt.tight_layout()
+    plt.show()
