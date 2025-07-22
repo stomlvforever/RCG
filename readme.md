@@ -43,7 +43,7 @@ The RCG benchmark suite addresses the challenge of parasitic capacitance predict
 Our framework supports four key parasitic estimation tasks:
 
 - Coupling Capacitance Regression/Classification
-- Ground Capacitance Regression/Classification:
+- Ground Capacitance Regression/Classification
 
 The overall process of circuit transformation into a diagram is as follows:
 ![Framework Workflow](imgs/Fig_3_V2.png)
