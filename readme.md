@@ -5,7 +5,6 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.2.0-red)](https://pytorch.org/)
 [![PyG](https://img.shields.io/badge/PyG-2.6.1-orange)](https://pytorch-geometric.readthedocs.io/)
 
-Official implementation of the paper "Transferable Parasitic Estimation via Graph Contrastive Learning and Label Rebalancing in AMS Circuits".
 
 ## 📑 Table of Contents
 - [Overview](#overview)
