@@ -29,11 +29,23 @@ def dataset_sampling(args, dataset):
     train_graph = dataset[graph_idx]
     # print(f"train_graph.y:{train_graph.y}")
     if args.task_level == 'node':
-        if args.net_only:
-            mask = train_graph.node_type == NET 
-            class_labels = train_graph.y[mask, 1]
+        # train_graph.y 可能是：
+        #  • 二维 tensor ([N,2], [原始值, 类别 id])
+        #  • 一维 tensor ([N], 只有类别 id)
+        if train_graph.y.dim() > 1:
+            # 分类时用第二列
+            if args.net_only:
+                mask = train_graph.node_type == NET
+                class_labels = train_graph.y[mask, 1]
+            else:
+                class_labels = train_graph.y[:, 1]
         else:
-            class_labels = train_graph.y[:, 1]
+            # 只有类别 id，仅仅用于api函数
+            if args.net_only:
+                mask = train_graph.node_type == NET
+                class_labels = train_graph.y[mask]
+            else:
+                class_labels = train_graph.y
         # get all node indices
         # valid_mask = (train_graph.y[:, 0] > 1e-30)  # 假设第一列是原始值
         # valid_nodes = np.where(valid_mask)[0]
@@ -94,7 +106,14 @@ def dataset_sampling(args, dataset):
             )
     
     elif args.task_level == 'edge':
-        class_labels = train_graph.edge_label[:,1]
+        # edge_label 可能是一维（回归）或二维（分类时第一列连续、第二列类别）
+        if train_graph.edge_label.dim() > 1:
+            # 分类任务：第二列是类别 id
+            class_labels = train_graph.edge_label[:, 1]
+            
+        else: #仅用于api函数
+            # 回归任务：一维 tensor
+            class_labels = train_graph.edge_label
         ## get split for validation
         train_ind, val_ind = train_test_split(
             np.arange(train_graph.edge_label.size(0)), 
