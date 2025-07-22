@@ -285,7 +285,7 @@ curl -X POST "http://localhost:8000/api/train" -H "Content-Type: application/jso
 # check status of task ——
 curl -X GET "http://localhost:8000/api/tasks/task_id"
 # evaluate edge predictions
-curl -X POST "http://localhost:8000/api/evaluate" -H "Content-Type: application/json" -d '{"dataset_name":"ssram","task":"edgeclass","y_true":[0,1,2],"y_pred":[0,2,2]}' 
+curl -X POST "http://localhost:8000/api/evaluate" -H "Content-Type: application/json" -d '{"dataset_name":"ssram","task":"edgeclass"}' 
 # visualize edge label buckets
 curl -X POST "http://localhost:8000/api/visualize" -H "Content-Type: application/json" -d '{"dataset_name":"ssram","task_level":"edge","class_boundaries":[0.2,0.4,0.6,0.8]}'
 # list all supported datasets
