@@ -274,6 +274,12 @@ python api.py
 ```
 Then you can open another terminal window.
 ```bash
+Available dataset_name: `sandwich`, `ultra8t`, `ssram`, `sp8192w`, `digtime`, `timing_ctrl`, `array_128_32_8t`
+task_level: `edge`，`node`
+task: `edgeclass`，`nodeclass`，`edgeregress`， `noderegress`
+```
+
+```bash
 # create “ssram” for node classification
 curl -X POST "http://localhost:8000/api/dataset/create" -H "Content-Type: application/json" -d '{"name":"ssram","task":"nodeclass"}'
 # get split indices for nodeclass
