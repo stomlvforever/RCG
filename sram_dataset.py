@@ -17,42 +17,10 @@ import matplotlib
 matplotlib.use('Agg')     # 或者 'Qt5Agg'，取决于你的系统上装了哪个 GUI 库
 import matplotlib.pyplot as plt
 import numpy as np
-from plot import visualize_node_label_distribution, visualize_edge_label_distribution
+from plot import visualize_node_label_distribution, visualize_edge_label_distribution, plot_edge_label_distribution
 # 指定中文字体（以黑体 SimHei 为例，Windows 下通常就有；Linux 则需先安装）
 plt.rc("font",family='Nimbus Sans')
 
-def plot_edge_label_distribution(edge_labels: np.ndarray, class_boundaries: np.ndarray):
-    """
-    Plots the distribution of edge label classes.
-    
-    Args:
-        edge_labels: 1D numpy array of normalized edge label values (floats in [0, 1]).
-        class_boundaries: 1D numpy array of boundaries, e.g. [0.2, 0.4, 0.6, 0.8].
-    """
-    # Bucketize into class indices
-    edge_label_c = np.digitize(edge_labels, class_boundaries, right=False)
-    
-    # Count occurrences per class
-    num_classes = len(class_boundaries) + 1
-    counts = np.bincount(edge_label_c, minlength=num_classes)
-    
-    # Prepare labels
-    class_labels = []
-    prev = 0.0
-    for b in class_boundaries:
-        class_labels.append(f"[{prev:.2f}, {b:.2f})")
-        prev = b
-    class_labels.append(f"[{prev:.2f}, 1.00]")
-    
-    # Plot
-    plt.figure()
-    plt.bar(range(num_classes), counts)
-    plt.xticks(range(num_classes), class_labels, rotation=45, ha='right')
-    plt.xlabel("Edge Label Class Range")
-    plt.ylabel("Number of Samples")
-    plt.title("Edge Label Class Distribution")
-    plt.tight_layout()
-    plt.show()
 
 class SealSramDataset(InMemoryDataset):
     def __init__(
@@ -658,6 +626,11 @@ class SealSramDataset(InMemoryDataset):
 
             ## Calculate target edge type distributions (Cc_p2n : Cc_p2p : Cc_n2n)
             _, g.tar_edge_dist = g.tar_edge_type.unique(return_counts=True)
+            print(f"DEBUG_SRAM: In sram_graph_load, g.name={g.name}, task_level={self.task_level}. Does g have tar_edge_dist? {hasattr(g, 'tar_edge_dist')}")
+            if hasattr(g, 'tar_edge_dist'):
+                print(f"DEBUG_SRAM: tar_edge_dist type: {type(g.tar_edge_dist)}, value: {g.tar_edge_dist}")
+            # print(f"DEBUG: sram_graph_load: {g.name}, tar_edge_dist 是否已设置: {hasattr(g, 'tar_edge_dist')}, 形状: {g.tar_edge_dist.shape if hasattr(g, 'tar_edge_dist') else 'N/A'}")
+            # assert 0
             # print(f"g.tar_edge_dist:{g.tar_edge_dist}") #tensor([261027, 285103,  58461])
             ## remove target edges from the original g
             g.edge_type = g.edge_type[0:edge_offset]
@@ -692,24 +665,25 @@ class SealSramDataset(InMemoryDataset):
         # print(f"self.raw_paths:{self.raw_paths}")
         # assert 0
         ## generate negative edges for the loaded graph
-        neg_edge_index, neg_edge_type = get_pos_neg_edges(
-            graph, neg_ratio=self.neg_edge_ratio)  # 为边级任务生成负样本
-        
-        
-        ## sample a portion of pos/neg edges
-        (
-            pos_edge_index, pos_edge_type, pos_edge_y,
-            neg_edge_index, neg_edge_type
-        ) = get_balanced_edges(
-            graph, neg_edge_index, neg_edge_type, 
-            self.neg_edge_ratio, self.sample_rates[idx]
-        )
-
-
-        if self.task_level == 'edge' :
-            ## We only consider the positive edges in the regression task.
-            links = pos_edge_index  # [2, Np]
-            labels = pos_edge_y
+        if self.task_level == 'edge':
+                # 1) 生成负样本
+                neg_edge_index, neg_edge_type = get_pos_neg_edges(
+                    graph, neg_ratio=self.neg_edge_ratio
+                )
+                # 2) 平衡正负样本
+                (
+                    pos_edge_index, pos_edge_type, pos_edge_y,
+                    neg_edge_index, neg_edge_type
+                ) = get_balanced_edges(
+                    graph,
+                    neg_edge_index,
+                    neg_edge_type,
+                    self.neg_edge_ratio,
+                    self.sample_rates[idx]
+                )
+                # 用于 LinkNeighborLoader 的字段
+                links = pos_edge_index
+                labels = pos_edge_y
         elif self.task_level == 'node':
             # node classification
             graph.y = graph.tar_node_y.squeeze()  # assume shape is [num_nodes]
@@ -833,7 +807,8 @@ def performat_SramDataset(dataset_dir, name,
             net_only=net_only,
             class_boundaries=class_boundaries
         )
-
+    # print(f"dataset:{dataset[0]}")
+    # assert 0
     elapsed = time.perf_counter() - start
     timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
             + f'{elapsed:.2f}'[-3:]
