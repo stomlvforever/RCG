@@ -269,7 +269,8 @@ A service based on FastAPI, which encapsulates the RCG graph neural network pipe
 
 If you wish to use it, please follow the instructions below to operate.
 ```bash
-python api.py #Start the API
+# Start the API
+python api.py 
 ```
 Then you can open another terminal window.
 ```bash
