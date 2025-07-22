@@ -32,7 +32,9 @@ Official implementation of the paper "Transferable Parasitic Estimation via Grap
   - [Edge Task](#edge-task)
     - [Edge Classification Performance](#edge-classification-performance-comparison-across-different-datasets)
     - [Edge Regression Performance](#edge-regression-performance-comparison-across-different-datasets)
+- [RCG Circuit Graph Analysis API](#rcg-circuit-graph-analysis-api)
 - [License](#license)
+
 
 ## 🔍 Overview
 
@@ -262,7 +264,7 @@ The specific data is provided by the following table.
 | **GIN<sup>+</sup>**    | 0.0571 (-2.4%) | 0.6558 (+1.0%) | **0.0681 (-2.0%)** | 0.6882 (+1.1%) | 0.0861 (-5.3%) | 0.3800 (+16.8%) | **0.0779 (-0.8%)** | **0.4421 (+5.2%)** | 0.0990 (+2.0%) | 0.4215 (-1.6%) |
 | **GIN**     | 0.0585 | 0.6493 | 0.0695 | 0.6806 | 0.0909 | 0.3253 | 0.0785 | 0.4204 | **0.0970** | **0.4285** |
 
-## RCG Circuit Graph Analysis API
+## 🚀 RCG Circuit Graph Analysis API
 A service based on FastAPI, which encapsulates the RCG graph neural network pipeline. This service provides endpoint functions such as creating/loading datasets, segmenting and extracting data, starting and monitoring training, evaluating prediction results, 和 visualizing label distribution. It also supports four types of tasks: node regression and classification, edge regression and classification.
 
 If you wish to use it, please follow the instructions below to operate.
