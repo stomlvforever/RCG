@@ -14,7 +14,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="CircuitGCL")
     # Task setting
     parser.add_argument("--task_level", type=str, default="edge", help="Task level. 'node' or 'edge'.")
-    parser.add_argument("--task", type=str, default="classification", help="Task type. 'classification' or 'regression'.")
+    parser.add_argument("--task", type=str, default="regression", help="Task type. 'classification' or 'regression'.")
     
     # Dataset setting
     parser.add_argument("--dataset", type=str, default="ssram+digtime+timing_ctrl+array_128_32_8t+ultra8t+sandwich", help="Names of datasets.") # the first dataset is the training dataset
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     parser.add_argument('--g_ffn', type=int, default=1, help='Whether to use ffn in GNN+')
     
     ## Downstream GNN setting
-    parser.add_argument("--model", type=str, default='sage', choices=['clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'], help="The gnn model. Could be 'clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'.")
+    parser.add_argument("--model", type=str, default='gps_attention', choices=['clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'], help="The gnn model. Could be 'clustergcn', 'resgatedgcn', 'gat', 'gcn', 'sage', 'gine', 'gps_attention'.")
     parser.add_argument("--num_gnn_layers", type=int, default=4, help="Number of GNN layers.")
     parser.add_argument("--num_head_layers", type=int, default=2, help="Number of head layers.")
     parser.add_argument("--hid_dim", type=int, default=144, help="Hidden layer dim.")
