@@ -173,9 +173,10 @@ if __name__ == "__main__":
         cl_embeds = None
 
     # STEP 4: Training Epochs ================================================================ #
-
+    # print(dataset)
+    # assert 0
     downstream_train(args, dataset, device, cl_embeds)
 
     # sys.stdout = original_stdout
     # log_file.close()
-    print(f"Finished running and save results to {log_filename}")
+    # print(f"Finished running and save results to {log_filename}")
