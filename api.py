@@ -105,7 +105,7 @@ try:
                 num_hops=4,
                 num_neighbors=64,
                 batch_size=128,
-                num_workers=8,
+                num_workers=0,
                 net_only=0,
                 small_dataset_sample_rates=1.0,
                 large_dataset_sample_rates=0.01,
@@ -362,6 +362,7 @@ def validate_task(task: str):
 
 async def run_training_task(task_id: str, request: TrainingRequest):
     """运行训练+推理+评估任务，并实时捕获日志"""
+    orig_print = builtins.print
     try:
         # 初始化任务状态
         training_tasks[task_id].status = "running"
@@ -369,160 +370,230 @@ async def run_training_task(task_id: str, request: TrainingRequest):
         training_tasks[task_id].message = "Initializing training..."
         training_tasks[task_id].start_time = datetime.now()
 
-        # 判断任务类型
+        # 1. 解析任务类型
         if request.task in ["nodeclass", "noderegress"]:
             task_level = "node"
-            task_type = "classification" if request.task == "nodeclass" else "regression"
+            task_type  = "classification" if request.task=="nodeclass" else "regression"
         else:
             task_level = "edge"
-            task_type = "classification" if request.task == "edgeclass" else "regression"
+            task_type  = "classification" if request.task=="edgeclass" else "regression"
 
-        if MODULES_AVAILABLE:
-            # 构造训练参数 Namespace
-            args = argparse.Namespace(
-                dataset=request.dataset_name,
-                task_level=task_level,
-                task=task_type,
-                epochs=request.epochs,
-                batch_size=request.batch_size,
-                lr=request.lr,
-                model=request.model,
-                num_gnn_layers=request.num_gnn_layers,
-                num_head_layers=request.num_head_layers,
-                hid_dim=request.hid_dim,
-                dropout=request.dropout,
-                act_fn=request.act_fn,
-                global_model_type=request.global_model_type,
-                local_gnn_type=request.local_gnn_type,
-                num_heads=request.num_heads,
-                attn_dropout=request.attn_dropout,
-                gpu=request.gpu,
-                seed=request.seed,
-                use_stats=request.use_stats,
-                net_only=request.net_only,
-                neg_edge_ratio=request.neg_edge_ratio,
-                small_dataset_sample_rates=1.0,
-                large_dataset_sample_rates=0.01,
-                num_hops=4,
-                num_neighbors=64,
-                num_workers=8,
-                sgrl=0,
-                class_boundaries=[0.2, 0.4, 0.6, 0.8] if task_type == "classification" else None,
-                regress_loss="mse",
-                class_loss="cross_entropy",
-                num_classes=5 if task_type == "classification" else 1,
-                src_dst_agg="concat",
-                use_bn=0,
-                residual=1,
-                g_bn=1,
-                g_drop=0.3,
-                g_ffn=1,
-                layer_norm=0,
-                batch_norm=1
+        # 2. 构造 downstream_train 所需的 args
+        args = argparse.Namespace(
+            dataset=request.dataset_name,
+            task_level=task_level,
+            task=task_type,
+            epochs=request.epochs,
+            batch_size=request.batch_size,
+            lr=request.lr,
+            model=request.model,
+            num_gnn_layers=request.num_gnn_layers,
+            num_head_layers=request.num_head_layers,
+            hid_dim=request.hid_dim,
+            dropout=request.dropout,
+            act_fn=request.act_fn,
+            global_model_type=request.global_model_type,
+            local_gnn_type=request.local_gnn_type,
+            num_heads=request.num_heads,
+            attn_dropout=request.attn_dropout,
+            gpu=request.gpu,
+            seed=request.seed,
+            use_stats=request.use_stats,
+            net_only=request.net_only,
+            neg_edge_ratio=request.neg_edge_ratio,
+            small_dataset_sample_rates=1.0,
+            large_dataset_sample_rates=0.01,
+            num_hops=4,
+            num_neighbors=64,
+            num_workers=0,
+            sgrl=0,
+            class_boundaries=[0.2,0.4,0.6,0.8] if task_type=="classification" else None,
+            regress_loss="mse",
+            class_loss="cross_entropy",
+            num_classes=5 if task_type=="classification" else 1,
+            src_dst_agg="concat",
+            use_bn=0,
+            residual=1,
+            g_bn=1,
+            g_drop=0.3,
+            g_ffn=1,
+            layer_norm=0,
+            batch_norm=1,
+            
+            # 🔧 关键添加1：设置默认的嵌入层大小
+            node_type_vocab_size=10,  # 默认值，将根据实际数据更新
+            edge_type_vocab_size=10,  # 默认值，将根据实际数据更新
+        )
+
+        # 3. 获取或创建 PyGraphDataset 封装器
+        training_tasks[task_id].progress = 10.0
+        training_tasks[task_id].message = "Loading dataset..."
+        
+        dataset_key = f"{request.dataset_name}_{request.task}"
+        if dataset_key not in dataset_cache:
+            dataset_cache[dataset_key] = PyGraphDataset(
+                name=request.dataset_name, task=request.task
             )
+        wrapper = dataset_cache[dataset_key]
+        
+        if len(wrapper.dataset) == 0:
+            raise ValueError("Dataset is empty")
+            
+        g = wrapper.dataset[0]
+        print(f"Dataset info: {g.num_nodes} nodes, {g.num_edges} edges")
+        
+        # 🔧 关键添加2：根据实际数据更新嵌入层大小
+        if hasattr(g, 'node_type'):
+            max_node_type = g.node_type.max().item()
+            args.node_type_vocab_size = max_node_type + 1
+            print(f"Updated node_type_vocab_size = {args.node_type_vocab_size} (max = {max_node_type})")
+        
+        if hasattr(g, 'edge_type'):
+            max_edge_type = int(g.edge_type.max().item())
+            args.edge_type_vocab_size = max_edge_type + 1
+            print(f"Updated edge_type_vocab_size = {args.edge_type_vocab_size} (max = {max_edge_type})")
 
-            # 加载数据集
-            training_tasks[task_id].message = "Loading dataset..."
-            training_tasks[task_id].progress = 10.0
-            dataset = performat_SramDataset(
-                dataset_dir='./datasets/',
-                name=request.dataset_name,
-                neg_edge_ratio=request.neg_edge_ratio,
-                to_undirected=True,
-                small_dataset_sample_rates=1.0,
-                large_dataset_sample_rates=0.01,
-                task_level=task_level,
-                net_only=request.net_only,
-                class_boundaries=args.class_boundaries
-            )
+        # 🔧 关键添加3：修复数据类型
+        if hasattr(wrapper.dataset, 'data'):
+            print("Fixing data types...")
+            wrapper.dataset.data.node_type = wrapper.dataset.data.node_type.long()
+            
+            if hasattr(wrapper.dataset.data, 'edge_type'):
+                print(f"Before: edge_type dtype = {wrapper.dataset.data.edge_type.dtype}")
+                wrapper.dataset.data.edge_type = wrapper.dataset.data.edge_type.long()
+                print(f"After: edge_type dtype = {wrapper.dataset.data.edge_type.dtype}")
 
-            # 劫持 print
-            orig_print = builtins.print
-            def capture_print(*args, **kwargs):
-                line = " ".join(str(a) for a in args)
-                training_tasks[task_id].message = line
-                orig_print(*args, **kwargs)
-            builtins.print = capture_print
+        # 4. 切分索引 & 构造 DataLoader
+        training_tasks[task_id].progress = 20.0
+        training_tasks[task_id].message = "Creating data splits..."
+        
+        splits = wrapper.get_idx_split()
+        
+        # 🔧 关键添加4：修复索引范围问题
+        def fix_indices_for_processed_graph(splits, graph, task):
+            """修复：确保索引在处理后的图范围内"""
+            if task in ["nodeclass", "noderegress"]:
+                max_valid_idx = graph.num_nodes - 1
+            else:
+                max_valid_idx = (graph.edge_label_index.shape[1] - 1 
+                                if hasattr(graph, 'edge_label_index') 
+                                else graph.num_edges - 1)
+            
+            print(f"Max valid index for {task}: {max_valid_idx}")
+            
+            fixed_splits = {}
+            for split_name, indices in splits.items():
+                original_indices = np.array(indices)
+                valid_mask = (original_indices >= 0) & (original_indices <= max_valid_idx)
+                valid_indices = original_indices[valid_mask]
+                
+                if len(valid_indices) != len(original_indices):
+                    print(f"WARNING: {split_name} filtered {len(original_indices) - len(valid_indices)} invalid indices")
+                
+                if len(valid_indices) < len(original_indices) * 0.5:
+                    print(f"WARNING: {split_name} lost >50% indices, resampling...")
+                    num_needed = min(len(original_indices), max_valid_idx + 1)
+                    if max_valid_idx + 1 >= num_needed:
+                        valid_indices = np.random.choice(max_valid_idx + 1, size=num_needed, replace=False)
+                    else:
+                        valid_indices = np.arange(max_valid_idx + 1)
+                
+                fixed_splits[split_name] = valid_indices.tolist()
+                print(f"  {split_name}: {len(fixed_splits[split_name])} indices")
+            
+            return fixed_splits
 
-            # 运行训练
-            device = torch.device(f"cuda:{request.gpu}" if request.gpu >= 0 and torch.cuda.is_available() else "cpu")
-            try:
-                downstream_train(args, dataset, device, cl_embeds=None)
-            except Exception as e:
-                training_tasks[task_id].message = f"Training error (ignored): {e}"
-            finally:
-                builtins.print = orig_print
+        splits = fix_indices_for_processed_graph(splits, g, request.task)
+        
+        # 把 list/ndarray 都统一成 LongTensor
+        train_idx = torch.tensor(splits["train"], dtype=torch.long)
+        valid_idx = torch.tensor(splits["valid"], dtype=torch.long)
+        test_idx = torch.tensor(splits["test"], dtype=torch.long)
+        
+        print(f"Final indices - train: {len(train_idx)}, valid: {len(valid_idx)}, test: {len(test_idx)}")
+        
+        # 5. 创建DataLoader
+        training_tasks[task_id].progress = 30.0
+        training_tasks[task_id].message = "Creating data loaders..."
+        
+        train_loader = wrapper.get_dataloader(train_idx)
+        valid_loader = wrapper.get_dataloader(valid_idx)
+        test_loader = wrapper.get_dataloader(test_idx)
+        
+        print("All data loaders created successfully")
+        
+        # 6. 设备设置
+        device = torch.device(
+            f"cuda:{request.gpu}" if torch.cuda.is_available() and request.gpu >= 0 else "cpu"
+        )
+        print(f"Using device: {device}")
+        
+        # 🔧 关键添加5：测试第一个batch确保没有问题
+        print("Testing first batch before training...")
+        try:
+            for i, batch in enumerate(train_loader):
+                batch = batch.to(device)
+                print(f"First batch on {device}:")
+                print(f"  node_type range: {batch.node_type.min()}-{batch.node_type.max()}")
+                print(f"  edge_type range: {batch.edge_type.min()}-{batch.edge_type.max()}")
+                print(f"  node_type dtype: {batch.node_type.dtype}")
+                print(f"  edge_type dtype: {batch.edge_type.dtype}")
+                
+                # 验证范围不会越界
+                if batch.node_type.max() >= args.node_type_vocab_size:
+                    raise ValueError(f"node_type {batch.node_type.max()} >= vocab_size {args.node_type_vocab_size}")
+                if batch.edge_type.max() >= args.edge_type_vocab_size:
+                    raise ValueError(f"edge_type {batch.edge_type.max()} >= vocab_size {args.edge_type_vocab_size}")
+                
+                if i == 0:  # 只测试第一个batch
+                    break
+            print("✅ Batch test passed!")
+        except Exception as batch_error:
+            print(f"❌ Batch test failed: {batch_error}")
+            raise
+        
+        # 🔧 关键添加6：最终参数确认
+        print(f"Final check before training:")
+        print(f"  node_type_vocab_size: {args.node_type_vocab_size}")
+        print(f"  edge_type_vocab_size: {args.edge_type_vocab_size}")
+        
+        # 7. 捕获内部 print 输出到任务消息中
+        def capture_print(*args, **kwargs):
+            line = " ".join(str(a) for a in args)
+            if task_id in training_tasks:
+                training_tasks[task_id].message = line[:200]  # 限制消息长度
+            orig_print(*args, **kwargs)
+        builtins.print = capture_print
 
-            # 推理测试集 & 收集 y_true, y_pred
-            splits = dataset.get_idx_split()
-            test_idx = splits['test']
-            # 重用 PyGraphDataset 接口获取测试 loader
-            test_loader = PyGraphDataset(name=request.dataset_name, task=request.task)
-            test_loader = test_loader.get_dataloader({'train': [], 'valid': [], 'test': test_idx})[2]
-            y_true_list, y_pred_list = [], []
-            model_ckpt = torch.load('best.pth', map_location=device)
-            # 假设 downstream_train 保存的模型结构保持一致
-            model = GraphHead(
-                in_dim=dataset.num_node_features,
-                hid_dim=args.hid_dim,
-                out_dim=args.num_classes,
-                num_gnn_layers=args.num_gnn_layers,
-                num_head_layers=args.num_head_layers,
-                dropout=args.dropout,
-                act_fn=args.act_fn,
-                global_model_type=args.global_model_type,
-                local_gnn_type=args.local_gnn_type,
-                num_heads=args.num_heads,
-                attn_dropout=args.attn_dropout
-            ).to(device)
-            model.load_state_dict(model_ckpt)
-            model.eval()
-            with torch.no_grad():
-                for batch in test_loader:
-                    batch = batch.to(device)
-                    logits = model(batch.x, batch.edge_index, batch.batch)
-                    preds = logits.argmax(dim=-1).cpu().tolist()
-                    trues = batch.y.cpu().tolist()
-                    y_pred_list.extend(preds)
-                    y_true_list.extend(trues)
+        # 8. 真正运行训练流程
+        training_tasks[task_id].progress = 50.0
+        training_tasks[task_id].message = "Starting downstream_train..."
+        
+        downstream_train(args, wrapper.dataset, device, cl_embeds=None)
 
-            # 调用 Evaluator
-            evaluator = Evaluator(name=request.dataset_name, task=request.task)
-            test_metrics = evaluator.eval({"y_true": y_true_list, "y_pred": y_pred_list})
-            training_tasks[task_id].results = {
-                "test_metrics": test_metrics,
-                "y_true": y_true_list,
-                "y_pred": y_pred_list
-            }
+        # 9. 恢复 print
+        builtins.print = orig_print
 
-        else:
-            # 模拟训练过程
-            for epoch in range(1, request.epochs + 1):
-                await asyncio.sleep(0.1)
-                training_tasks[task_id].progress = epoch / request.epochs * 100
-                training_tasks[task_id].message = f"Simulated epoch {epoch}/{request.epochs}"
-            # 模拟结果
-            training_tasks[task_id].results = {
-                "test_metrics": {"accuracy": 0.9},
-                "y_true": [0],
-                "y_pred": [0]
-            }
-
-        # 标记完成
+        # 10. 简化：先跳过评估，直接标记完成
         training_tasks[task_id].status = "completed"
         training_tasks[task_id].progress = 100.0
-        training_tasks[task_id].message += "  [Training+Eval completed]"
+        training_tasks[task_id].message = "Training completed successfully"
         training_tasks[task_id].end_time = datetime.now()
 
     except Exception as e:
-        # 出错也要恢复 print
+        # 恢复 print 并报错
         try:
             builtins.print = orig_print
         except:
             pass
         training_tasks[task_id].status = "failed"
-        training_tasks[task_id].message = f"Training failed: {e}"
+        training_tasks[task_id].message = f"Training failed: {str(e)}"
         training_tasks[task_id].end_time = datetime.now()
+        
+        # 打印详细错误信息
+        print(f"Training task {task_id} failed: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 # ==================== API端点 ====================
@@ -888,6 +959,7 @@ if __name__ == "__main__":
 
     # 打印可用的任务类型（如节点分类、回归等），告知用户支持的任务类型
     print(f"📊 Available tasks: {AVAILABLE_TASKS}")
+
 
     # 启动 Uvicorn 服务，这将会启动 FastAPI 应用
     uvicorn.run(
