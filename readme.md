@@ -301,7 +301,6 @@ Or you can choose the following way to run our API
 ```bash
 from api import PyGraphDataset, Evaluator
 import torch
-from downstream_train import downstream_train
 
 # 1. Load the “ssram” dataset for node‐classification
 dataset = PyGraphDataset(name="ssram", task="nodeclass")
