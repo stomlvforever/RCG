@@ -8,7 +8,6 @@
 
 ## 📑 Table of Contents
 - [Overview](#overview)
-- [Key Features](#key-features)
 - [Repository Structure](#repository-structure)
 - [Installation](#installation)
 - [Usage](#usage)
