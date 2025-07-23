@@ -267,6 +267,7 @@ The specific data is provided by the following table.
 ## 🚀 RCG Circuit Graph Analysis API
 A service based on FastAPI, which encapsulates the RCG graph neural network pipeline. This service provides endpoint functions such as creating/loading datasets, segmenting and extracting data, starting and monitoring training, evaluating prediction results, 和 visualizing label distribution. It also supports four types of tasks: node regression and classification, edge regression and classification.
 
+### Plan One
 If you wish to use it, please follow the instructions below to operate.
 ```bash
 # Start the API
@@ -297,6 +298,8 @@ curl -X POST "http://localhost:8000/api/visualize" -H "Content-Type: application
 # list all supported datasets
 curl -X GET "http://localhost:8000/api/datasets" 
 ```
+
+### Plan Two
 Or you can choose the following way to run our API
 ```bash
 from api import PyGraphDataset, Evaluator
