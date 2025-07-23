@@ -14,7 +14,7 @@ NET = 0
 DEV = 1
 PIN = 2
 
-def dataset_sampling(args, dataset):
+def dataset_sampling(args, dataset, train_idx=None, val_idx=None):
     """ 
     Sampling subgraphs for each graph in dataset
     Args:
@@ -22,6 +22,9 @@ def dataset_sampling(args, dataset):
         dataset (torch_geometric.data.InMemoryDataset): The dataset
     Return:
         train_loader, val_loader, test_loaders
+    dataset (torch_geometric.data.InMemoryDataset): The dataset
+    train_idx (Tensor or list, optional): 从 API 传入的训练节点/边索引
+    val_idx   (Tensor or list, optional): 从 API 传入的验证节点/边索引
     """
 
     ## default training data come from the first dataset
@@ -50,13 +53,15 @@ def dataset_sampling(args, dataset):
         # valid_mask = (train_graph.y[:, 0] > 1e-30)  # 假设第一列是原始值
         # valid_nodes = np.where(valid_mask)[0]
         # train_node_ind, val_node_ind = train_test_split(valid_nodes, test_size=0.2)
-        all_nodes = np.arange(train_graph.y.size(0))
-        # print(f"train_graph.y:{train_graph.y},train_graph.y[:, 0]:{train_graph.y[:, 0]}")
-        # assert 0       
-        # split training and validation set
-        train_node_ind, val_node_ind = train_test_split(
-            all_nodes, test_size=0.2, shuffle=True
-        )
+        # 如果外部给了索引，就用外部的；否则再内部做一次随机 split
+        if train_idx is not None and val_idx is not None:
+            train_node_ind = train_idx
+            val_node_ind   = val_idx
+        else:
+            all_nodes = np.arange(train_graph.y.size(0))
+            train_node_ind, val_node_ind = train_test_split(
+                all_nodes, test_size=0.2, shuffle=True
+            )
         # convert to tensor
         train_node_ind = torch.tensor(train_node_ind, dtype=torch.long)
         val_node_ind = torch.tensor(val_node_ind, dtype=torch.long)
