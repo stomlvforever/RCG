@@ -5,11 +5,9 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.2.0-red)](https://pytorch.org/)
 [![PyG](https://img.shields.io/badge/PyG-2.6.1-orange)](https://pytorch-geometric.readthedocs.io/)
 
-Official implementation of the paper "Transferable Parasitic Estimation via Graph Contrastive Learning and Label Rebalancing in AMS Circuits".
 
 ## 📑 Table of Contents
 - [Overview](#overview)
-- [Key Features](#key-features)
 - [Repository Structure](#repository-structure)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -43,7 +41,7 @@ The RCG benchmark suite addresses the challenge of parasitic capacitance predict
 Our framework supports four key parasitic estimation tasks:
 
 - Coupling Capacitance Regression/Classification
-- Ground Capacitance Regression/Classification:
+- Ground Capacitance Regression/Classification
 
 The overall process of circuit transformation into a diagram is as follows:
 ![Framework Workflow](imgs/Fig_3_V2.png)
@@ -134,6 +132,7 @@ datasets/raw/
 ├── array_128_32_8t.pt
 ├── ultar8t.pt
 ├── sandwich.pt
+├── sp8192w.pt
 └── ...
 ```
 
@@ -169,12 +168,12 @@ Due to the wide distribution range of the capacitance, we limit the values to be
 #### Edge Capacitance Distributions
 <table>
   <tr>
-    <td align="center"><img src="imgs/edge_label_dist_ssram.png" width="150"></td>
-    <td align="center"><img src="imgs/edge_label_dist_digtime.png" width="150"></td>
-    <td align="center"><img src="imgs/edge_label_dist_array_128_32_8t.png" width="150"></td>
-    <td align="center"><img src="imgs/edge_label_dist_timing_ctrl.png" width="150"></td>
-    <td align="center"><img src="imgs/edge_label_dist_ultra8t.png" width="150"></td>
-    <td align="center"><img src="imgs/edge_label_dist_sandwich.png" width="150"></td>
+    <td align="center"><img src="imgs/edge_label_dist_ssram.png" width="160" height="100"></td>
+    <td align="center"><img src="imgs/edge_label_dist_digtime.png" width="160" height="100"></td>
+    <td align="center"><img src="imgs/edge_label_dist_array_128_32_8t.png" width="160" height="100"></td>
+    <td align="center"><img src="imgs/edge_label_dist_timing_ctrl.png" width="160" height="100"></td>
+    <td align="center"><img src="imgs/edge_label_dist_ultra8t.png" width="160" height="100"></td>
+    <td align="center"><img src="imgs/edge_label_dist_sandwich.png" width="160" height="100"></td>
   </tr>
   <tr>
     <td align="center">ssram</td>
@@ -188,12 +187,12 @@ Due to the wide distribution range of the capacitance, we limit the values to be
 #### Node Capacitance Distributions 
 <table>
   <tr>
-    <td align="center"><img src="imgs/node_label_dist_ssram.png" width="150"></td>
-    <td align="center"><img src="imgs/node_label_dist_digtime.png" width="150"></td>
-    <td align="center"><img src="imgs/node_label_dist_array_128_32_8t.png" width="150"></td>
-    <td align="center"><img src="imgs/node_label_dist_timing_ctrl.png" width="150"></td>
-    <td align="center"><img src="imgs/node_label_dist_ultra8t.png" width="150"></td>
-    <td align="center"><img src="imgs/node_label_dist_sandwich.png" width="150"></td>
+    <td align="center"><img src="imgs/node_label_dist_ssram.png" width="160" height="100"></td>
+    <td align="center"><img src="imgs/node_label_dist_digtime.png" width="160" height="100"></td>
+    <td align="center"><img src="imgs/node_label_dist_array_128_32_8t.png" width="160" height="100"></td>
+    <td align="center"><img src="imgs/node_label_dist_timing_ctrl.png" width="160" height="100"></td>
+    <td align="center"><img src="imgs/node_label_dist_ultra8t.png" width="160" height="100"></td>
+    <td align="center"><img src="imgs/node_label_dist_sandwich.png" width="160" height="100"></td>
   </tr>
   <tr>
     <td align="center">ssram</td>
@@ -250,7 +249,7 @@ The specific data is provided by the following table.
 | **GCN**     | 0.7538 | 0.6547 | 0.6233 | 0.4268 | 0.5902 | 0.4587 | **0.7171** | 0.5540 | 0.6129 | 0.4314 |
 | **GatedGCN<sup>+</sup>** | 0.7559 (-0.3%) | 0.6444 (-7.0%) | 0.6084 (+10.0%) | 0.4383 (+5.0%) | 0.6997 (+0.5%) | 0.5968 (-5.0%) | 0.6974 (+3.2%) | 0.5185 (-8.0%) | 0.5842 (+4.0%) | 0.3941 (-4.4%) |
 | **GatedGCN** | 0.7580 | 0.6573 | 0.5532 | 0.4178 | 0.6961 | **0.6275** | 0.6759 | **0.5612** | 0.5614 | 0.4124 |
-| **GIN+**    | 0.7512 (-2.4%) | 0.6383 (-5.1%) | 0.6269 (+3.2%) | **0.4715 (+18.8%)** | 0.6412 (+5.1%) | 0.4530 (+1.8%) | 0.6779 (-1.8%) | 0.4839 (-13.7%) | 0.5924 (+1.8%) | **0.4437 (+4.0%)** |
+| **GIN<sup>+</sup>**    | 0.7512 (-2.4%) | 0.6383 (-5.1%) | 0.6269 (+3.2%) | **0.4715 (+18.8%)** | 0.6412 (+5.1%) | 0.4530 (+1.8%) | 0.6779 (-1.8%) | 0.4839 (-13.7%) | 0.5924 (+1.8%) | **0.4437 (+4.0%)** |
 | **GIN**     | **0.7699** | **0.6726** | 0.6073 | 0.3969 | 0.6103 | 0.4452 | 0.6902 | 0.5609 | 0.5822 | 0.4269 |
 
 ##### Edge Regression Performance Comparison across Different Datasets
@@ -267,12 +266,19 @@ The specific data is provided by the following table.
 ## 🚀 RCG Circuit Graph Analysis API
 A service based on FastAPI, which encapsulates the RCG graph neural network pipeline. This service provides endpoint functions such as creating/loading datasets, segmenting and extracting data, starting and monitoring training, evaluating prediction results, 和 visualizing label distribution. It also supports four types of tasks: node regression and classification, edge regression and classification.
 
+### Plan One
 If you wish to use it, please follow the instructions below to operate.
 ```bash
 # Start the API
 python api.py 
 ```
 Then you can open another terminal window.
+```bash
+Available dataset_name: `sandwich`, `ultra8t`, `ssram`, `sp8192w`, `digtime`, `timing_ctrl`, `array_128_32_8t`
+task_level: `edge`，`node`
+task: `edgeclass`，`nodeclass`，`edgeregress`， `noderegress`
+```
+
 ```bash
 # create “ssram” for node classification
 curl -X POST "http://localhost:8000/api/dataset/create" -H "Content-Type: application/json" -d '{"name":"ssram","task":"nodeclass"}'
@@ -285,13 +291,63 @@ curl -X POST "http://localhost:8000/api/train" -H "Content-Type: application/jso
 # check status of task ——
 curl -X GET "http://localhost:8000/api/tasks/task_id"
 # evaluate edge predictions
-curl -X POST "http://localhost:8000/api/evaluate" -H "Content-Type: application/json" -d '{"dataset_name":"ssram","task":"edgeclass","y_true":[0,1,2],"y_pred":[0,2,2]}' 
+curl -X POST "http://localhost:8000/api/evaluate" -H "Content-Type: application/json" -d '{"dataset_name":"ssram","task":"edgeclass"}' 
 # visualize edge label buckets
 curl -X POST "http://localhost:8000/api/visualize" -H "Content-Type: application/json" -d '{"dataset_name":"ssram","task_level":"edge","class_boundaries":[0.2,0.4,0.6,0.8]}'
 # list all supported datasets
 curl -X GET "http://localhost:8000/api/datasets" 
 ```
 
+### Plan Two
+Or you can choose the following way to run our API
+```bash
+import torch
+import asyncio
+from api import PyGraphDataset, Evaluator
+from api import create_visualization, VisualizationRequest
+
+# 1. Load the “ssram” dataset for node‐classification
+dataset = PyGraphDataset(name="ssram", task="nodeclass")
+
+# 2. Split into train/valid/test (60/20/20)
+splits = dataset.get_idx_split()
+train_idx = splits["train"]
+valid_idx = splits["valid"]
+test_idx  = splits["test"]
+
+# 3. Build PyG DataLoaders for each split
+train_loader = dataset.get_dataloader(train_idx)
+valid_loader = dataset.get_dataloader(valid_idx)
+test_loader  = dataset.get_dataloader(test_idx)
+
+# 4. After training, evaluate on your test split:
+#    Suppose you collected y_true/y_pred from your trained model:
+#    (e.g. iterate test_loader, run model(batch) → preds, batch.y[:,1] → labels)
+y_true = [0,1,1,0,2,1]   # ← replace with your actual test labels
+y_pred = [0,1,0,0,2,1]   # ← replace with your model’s predictions
+
+evaluator = Evaluator(name="ssram", task="nodeclass")
+metrics   = evaluator.eval({"y_true": y_true, "y_pred": y_pred})
+print("Evaluation results:", metrics)
+
+# 5. Visualize node‐label distribution
+async def main():
+    # 构造一个可视化请求
+    req = VisualizationRequest(
+        dataset_name="ssram",
+        task_level="node",              # or "edge"
+        class_boundaries=[0.2,0.4,0.6,0.8]
+    )
+    # 调用 FastAPI 里定义的 create_visualization 函数
+    res = await create_visualization(req)
+    return res
+
+if __name__ == "__main__":
+    result = asyncio.run(main())
+    print("Visualization metadata:", result)
+    print("Image saved at:", result["visualization_path"])
+
+```
 
 ## 📄 License
 
