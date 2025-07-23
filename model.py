@@ -88,11 +88,17 @@ class GraphHead(nn.Module):
 
         ## Node / Edge type encoders.
         ## Node attributes are {0, 1, 2} for net, device, and pin
-        self.node_encoder = nn.Embedding(num_embeddings=4,
-                                         embedding_dim=node_embed_dim)
-        ## Edge attributes are {0, 1} for 'device-pin' and 'pin-net' edges
-        self.edge_encoder = nn.Embedding(num_embeddings=4,
-                                         embedding_dim=hidden_dim)
+        ## Node / Edge type encoders.
+        ## Node attributes are {0, 1, 2} for net, device, and pin
+        node_type_vocab_size = getattr(args, 'node_type_vocab_size', 4)
+        self.node_encoder = nn.Embedding(num_embeddings=node_type_vocab_size,
+                                        embedding_dim=node_embed_dim)
+
+        ## Edge attributes - 使用动态大小
+        edge_type_vocab_size = getattr(args, 'edge_type_vocab_size', 5)
+        self.edge_encoder = nn.Embedding(num_embeddings=edge_type_vocab_size,
+                                        embedding_dim=hidden_dim)
+
         
         # GNN layers
         self.layers = nn.ModuleList()
