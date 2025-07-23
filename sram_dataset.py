@@ -103,15 +103,20 @@ class SealSramDataset(InMemoryDataset):
             
             print(f"load processed {name}, "+
                   f"len(data_list)={self.data_lengths[name]}, "+
-                  f"data_offset={self.data_offsets[name]} ")
-            
+                  f"data_offset={self.data_offsets[name]} ")        
         ## combine multiple graphs into data list
-        self.data, self.slices = self.collate(data_list)
 
+        self.data, self.slices = self.collate(data_list)
+        # print(data_list)
+        # print(f"self.data:{self.data},self.slices:{self.slices}")
+        # assert 0
     def norm_nfeat(self, ntypes):
-        if self._data is None or self.slices is None:
-            self.data, self.slices = self.collate(self._data_list)
-            self._data_list = None
+        # print("DEBUG: _data_list =", self._data_list)
+        # print(f"self._data{self._data},self.slices{self.slices}")
+        # assert 0
+        # if self._data is None or self.slices is None:
+        #     self.data, self.slices = self.collate(self._data_list)
+        #     self._data_list = None
         # 首先检查哪些节点类型实际存在
         existing_types = torch.unique(self._data.node_type)
         print(f"实际存在的节点类型: {existing_types}")
