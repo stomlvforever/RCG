@@ -297,7 +297,36 @@ curl -X POST "http://localhost:8000/api/visualize" -H "Content-Type: application
 # list all supported datasets
 curl -X GET "http://localhost:8000/api/datasets" 
 ```
+Or you can choose the following way to run our API
+```bash
+from api import PyGraphDataset, Evaluator
+import torch
+from downstream_train import downstream_train
 
+# 1. Load the “ssram” dataset for node‐classification
+dataset = PyGraphDataset(name="ssram", task="nodeclass")
+
+# 2. Split into train/valid/test (60/20/20)
+splits = dataset.get_idx_split()
+train_idx = splits["train"]
+valid_idx = splits["valid"]
+test_idx  = splits["test"]
+
+# 3. Build PyG DataLoaders for each split
+train_loader = dataset.get_dataloader(train_idx)
+valid_loader = dataset.get_dataloader(valid_idx)
+test_loader  = dataset.get_dataloader(test_idx)
+
+# 4. After training, evaluate on your test split:
+#    Suppose you collected y_true/y_pred from your trained model:
+#    (e.g. iterate test_loader, run model(batch) → preds, batch.y[:,1] → labels)
+y_true = [0,1,1,0,2,1]   # ← replace with your actual test labels
+y_pred = [0,1,0,0,2,1]   # ← replace with your model’s predictions
+
+evaluator = Evaluator(name="ssram", task="nodeclass")
+metrics   = evaluator.eval({"y_true": y_true, "y_pred": y_pred})
+print("Evaluation results:", metrics)
+```
 
 ## 📄 License
 
