@@ -302,10 +302,9 @@ curl -X GET "http://localhost:8000/api/datasets"
 ### Plan Two
 Or you can choose the following way to run our API
 ```bash
-from api import PyGraphDataset, Evaluator
 import torch
-
 import asyncio
+from api import PyGraphDataset, Evaluator
 from api import create_visualization, VisualizationRequest
 
 # 1. Load the “ssram” dataset for node‐classification
