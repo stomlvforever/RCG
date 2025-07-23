@@ -287,7 +287,7 @@ curl -X POST "http://localhost:8000/api/dataset/split" -H "Content-Type: applica
 # get train DataLoader for edge classification
 curl -X POST "http://localhost:8000/api/dataset/dataloader?split_type=train" -H "Content-Type: application/json" -d '{"name":"ssram","task":"edgeclass"}'
 # start training nodeclass on ssram
-curl -X POST "http://localhost:8000/api/train" -H "Content-Type: application/json" -d '{"dataset_name":"ssram","task":"nodeclass","task_level":"node","epochs":10,"batch_size":128,"lr":0.0001,"model":"gps_attention","num_gnn_layers":4,"num_head_layers":2,"hid_dim":144,"dropout":0.3,"act_fn":"prelu","global_model_type":"None","local_gnn_type":"CustomGatedGCN","num_heads":2,"attn_dropout":0.7,"gpu":0,"seed":42,"use_stats":1,"net_only":0,"neg_edge_ratio":0.5}' 
+curl -X POST "http://localhost:8000/api/train" -H "Content-Type: application/json" -d '{"dataset_name":"ssram","task":"nodeclass","task_level":"node","epochs":10,"batch_size":128,"lr":0.0001,"model":"gps_attention","num_gnn_layers":4,"num_head_layers":2,"hid_dim":144,"dropout":0.3,"act_fn":"prelu","global_model_type":"None","local_gnn_type":"CustomGatedGCN","num_heads":2,"attn_dropout":0.7,"gpu":1,"seed":42,"use_stats":1,"net_only":0,"neg_edge_ratio":0.5}' 
 # check status of task ——
 curl -X GET "http://localhost:8000/api/tasks/task_id"
 # evaluate edge predictions
