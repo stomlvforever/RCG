@@ -305,6 +305,9 @@ Or you can choose the following way to run our API
 from api import PyGraphDataset, Evaluator
 import torch
 
+import asyncio
+from api import create_visualization, VisualizationRequest
+
 # 1. Load the “ssram” dataset for node‐classification
 dataset = PyGraphDataset(name="ssram", task="nodeclass")
 
@@ -328,6 +331,24 @@ y_pred = [0,1,0,0,2,1]   # ← replace with your model’s predictions
 evaluator = Evaluator(name="ssram", task="nodeclass")
 metrics   = evaluator.eval({"y_true": y_true, "y_pred": y_pred})
 print("Evaluation results:", metrics)
+
+# 5. Visualize node‐label distribution
+async def main():
+    # 构造一个可视化请求
+    req = VisualizationRequest(
+        dataset_name="ssram",
+        task_level="node",              # or "edge"
+        class_boundaries=[0.2,0.4,0.6,0.8]
+    )
+    # 调用 FastAPI 里定义的 create_visualization 函数
+    res = await create_visualization(req)
+    return res
+
+if __name__ == "__main__":
+    result = asyncio.run(main())
+    print("Visualization metadata:", result)
+    print("Image saved at:", result["visualization_path"])
+
 ```
 
 ## 📄 License
