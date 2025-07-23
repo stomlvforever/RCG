@@ -95,7 +95,7 @@ class GraphHead(nn.Module):
                                         embedding_dim=node_embed_dim)
 
         ## Edge attributes - 使用动态大小
-        edge_type_vocab_size = getattr(args, 'edge_type_vocab_size', 5)
+        edge_type_vocab_size = getattr(args, 'edge_type_vocab_size', 4)
         self.edge_encoder = nn.Embedding(num_embeddings=edge_type_vocab_size,
                                         embedding_dim=hidden_dim)
 
