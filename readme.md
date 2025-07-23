@@ -300,7 +300,7 @@ curl -X GET "http://localhost:8000/api/datasets"
 ```
 
 ### Plan Two
-Or you can choose the following way to run our API
+Or you can choose the following way to run our API（eg.）
 ```bash
 import torch
 import asyncio
