@@ -18,9 +18,9 @@ matplotlib.use('Agg')     # 或者 'Qt5Agg'，取决于你的系统上装了哪�
 import matplotlib.pyplot as plt
 import numpy as np
 from plot import visualize_node_label_distribution, visualize_edge_label_distribution, plot_edge_label_distribution
+
 # 指定中文字体（以黑体 SimHei 为例，Windows 下通常就有；Linux 则需先安装）
 plt.rc("font",family='Nimbus Sans')
-
 
 class SealSramDataset(InMemoryDataset):
     def __init__(
@@ -103,20 +103,15 @@ class SealSramDataset(InMemoryDataset):
             
             print(f"load processed {name}, "+
                   f"len(data_list)={self.data_lengths[name]}, "+
-                  f"data_offset={self.data_offsets[name]} ")        
+                  f"data_offset={self.data_offsets[name]} ")
+            
         ## combine multiple graphs into data list
-
         self.data, self.slices = self.collate(data_list)
-        # print(data_list)
-        # print(f"self.data:{self.data},self.slices:{self.slices}")
-        # assert 0
+
     def norm_nfeat(self, ntypes):
-        # print("DEBUG: _data_list =", self._data_list)
-        # print(f"self._data{self._data},self.slices{self.slices}")
-        # assert 0
-        # if self._data is None or self.slices is None:
-        #     self.data, self.slices = self.collate(self._data_list)
-        #     self._data_list = None
+        if self._data is None or self.slices is None:
+            self.data, self.slices = self.collate(self._data_list)
+            self._data_list = None
         # 首先检查哪些节点类型实际存在
         existing_types = torch.unique(self._data.node_type)
         print(f"实际存在的节点类型: {existing_types}")
@@ -361,7 +356,6 @@ class SealSramDataset(InMemoryDataset):
         # assert 0
         logging.info(f"raw_path: {raw_path}")
         hg = torch.load(raw_path)
-        print(f"hg:{hg}")
         if isinstance(hg, list):
             hg = hg[0]
         # print("hg", hg)
@@ -413,7 +407,7 @@ class SealSramDataset(InMemoryDataset):
             ('pin', 'cc_p2p', 'pin'),        # 引脚到引脚的寄生耦合
             ('net', 'cc_n2n', 'net'),        # 网络到网络的寄生耦合
         ])
-        # print(f"hg:{hg}")
+        print(f"hg:{hg}")
         # assert 0
         ### transform hetero g into homo g
         g = hg.to_homogeneous() # 异构图转同构图 Data(edge_index=[2, 931250], x=[249570, 17], y=[931250], node_type=[249570], edge_type=[931250])
@@ -469,12 +463,13 @@ class SealSramDataset(InMemoryDataset):
                 
                 # # ===== 添加调试打印：仅net节点的标签 =====
                 # print(f"仅处理net节点模式:")
-
+                # print(f"  net节点数量: {net_nodes.shape[0]}")
                 # print(f"  net节点标签范围: [{g.tar_node_y[net_nodes].min():.2e}, {g.tar_node_y[net_nodes].max():.2e}]")
                 
             else:
                 ## lumped ground capacitance on net/pin nodes
                 g.tar_node_y = torch.cat(tar_node_y, dim=0)
+            
             # print(f"g.tar_node_y.shape[0]:{g.tar_node_y.shape[0]}")
 
                 # # ===== 添加调试打印：所有节点的标签 =====
@@ -538,7 +533,16 @@ class SealSramDataset(InMemoryDataset):
         tar_edge_index = g.edge_index[:, edge_offset:]
         tar_edge_type = g.edge_type[edge_offset:]
         tar_edge_y = torch.cat(tar_edge_y)
+        # print(f"tar_edge_y:{tar_edge_y}") #tar_edge_y:tensor([3.4233e-18, 3.8098e-19, 3.0819e-19,  ..., 1.5311e-17, 2.0015e-17,6.0056e-18])
 
+        # testing
+        # for i in range(tar_edge_type.min(), tar_edge_type.max()+1):
+        #     mask = tar_edge_type == i
+        #     print("tar_edge_type", tar_edge_type[mask][0], "tar_edge_y", tar_edge_y[mask][0])
+        # assert 0
+
+        ## restrict the capcitance value range 
+        legel_edge_mask = (tar_edge_y < 1e-15) & (tar_edge_y > 1e-21)
         """
         # legal_node_mask = (g.tar_node_y < 1e-15) & (g.tar_node_y > 1e-21)
         # legal_node_mask = legal_node_mask.squeeze()
@@ -566,85 +570,79 @@ class SealSramDataset(InMemoryDataset):
         [2.0348e-20]])
         """
         if self.task_level == 'node' :
+            print(f"g.tar_node_y:{g.tar_node_y}")
+            assert 0
             legal_node_mask = (g.tar_node_y < 1e-15) & (g.tar_node_y > 1e-21)
             legal_node_mask = legal_node_mask.squeeze()
             print(f"(~legal_node_mask).sum().item():{(~legal_node_mask).sum().item()},legal_node_mask:{legal_node_mask.size()}") #(~legal_node_mask).sum().item():126659,legal_node_mask:torch.Size([249570])
-        
-            # 替换非法值（此处用 1e-30 保证对数变换有效）
-            # 假设：
-            # - g.tar_node_y 是原始数据（可能包含 1e-30）
-            # - legal_node_mask 是合法掩码（False 表示非法节点）
-            # 获取非法节点的值
-            # invalid_node_values = g.tar_node_y[~legal_node_mask]
+       
+        # 替换非法值（此处用 1e-30 保证对数变换有效）
+        # 假设：
+        # - g.tar_node_y 是原始数据（可能包含 1e-30）
+        # - legal_node_mask 是合法掩码（False 表示非法节点）
+        # 获取非法节点的值
+        # invalid_node_values = g.tar_node_y[~legal_node_mask]
 
-            # # 过滤掉 0（或 1e-30），并找最小值
-            # if len(invalid_node_values) > 0:
-            #     non_zero_values = invalid_node_values[invalid_node_values > 1e-30]  # 或 != 0.0
-            #     if len(non_zero_values) > 0:
-            #         min_non_zero_in_invalid = non_zero_values.min()
-            #         print(f"非法节点中非零的最小值: {min_non_zero_in_invalid}") 非法节点中非零的最小值: 1.0339799565148436e-25
-            #     else:
-            #         print("所有非法节点的值都是 0（或 1e-30）")
-            # else:
-            #     print("没有非法节点")
+        # # 过滤掉 0（或 1e-30），并找最小值
+        # if len(invalid_node_values) > 0:
+        #     non_zero_values = invalid_node_values[invalid_node_values > 1e-30]  # 或 != 0.0
+        #     if len(non_zero_values) > 0:
+        #         min_non_zero_in_invalid = non_zero_values.min()
+        #         print(f"非法节点中非零的最小值: {min_non_zero_in_invalid}") 非法节点中非零的最小值: 1.0339799565148436e-25
+        #     else:
+        #         print("所有非法节点的值都是 0（或 1e-30）")
+        # else:
+        #     print("没有非法节点")
 
             g.tar_node_y[~legal_node_mask] = 1e-30
-            #================================  画图:node level =======================================
             visualize_node_label_distribution(g, name, self.class_boundaries)
-            """
-            node_attr:torch.Size([122911, 17]),legal_node_mask：torch.Size([249570])，tar_edge_index：torch.Size([2, 624865])，legel_edge_mask:torch.Size([624865])
-            tar_edge_type:tensor([2, 2, 2,  ..., 4, 4, 4]),g.x:tensor([[0],
-            [0],
-            [0],
-            ...,
-            [2],
-            [2],
-            [2]]),g.y:tensor([[7.1959e-18],
-            [5.6060e-15],
-            [1.0105e-16],
-            ...,
-            [2.2452e-19],
-            [2.3456e-18],
-            [2.0348e-20]])
-            """
-        if self.task_level == 'edge':                   
-            ## restrict the capcitance value range 
-            legel_edge_mask = (tar_edge_y < 1e-15) & (tar_edge_y > 1e-21)
-            # tar_edge_src_y = g.tar_node_y[tar_edge_index[0, :]].squeeze()
-            # tar_edge_dst_y = g.tar_node_y[tar_edge_index[1, :]].squeeze()
-            # legel_node_mask = (tar_edge_src_y < 1e-13) & (tar_edge_src_y > 1e-23)
-            # legel_node_mask &= (tar_edge_dst_y < 1e-13) & (tar_edge_dst_y > 1e-23)
-            # g.legal_node_mask = legal_node_mask.squeeze()
+        # print(f"node_attr:{g.node_attr.size()},legal_node_mask：{legal_node_mask.size()}，tar_edge_index：{tar_edge_index.size()}，legel_edge_mask:{legel_edge_mask.size()}")
+        # print(f"tar_edge_type:{tar_edge_type},g.x:{g.x},g.y:{g.y}")
+        # assert 0
+        """
+        node_attr:torch.Size([122911, 17]),legal_node_mask：torch.Size([249570])，tar_edge_index：torch.Size([2, 624865])，legel_edge_mask:torch.Size([624865])
+        tar_edge_type:tensor([2, 2, 2,  ..., 4, 4, 4]),g.x:tensor([[0],
+        [0],
+        [0],
+        ...,
+        [2],
+        [2],
+        [2]]),g.y:tensor([[7.1959e-18],
+        [5.6060e-15],
+        [1.0105e-16],
+        ...,
+        [2.2452e-19],
+        [2.3456e-18],
+        [2.0348e-20]])
+        """
+
+        # tar_edge_src_y = g.tar_node_y[tar_edge_index[0, :]].squeeze()
+        # tar_edge_dst_y = g.tar_node_y[tar_edge_index[1, :]].squeeze()
+        # legel_node_mask = (tar_edge_src_y < 1e-13) & (tar_edge_src_y > 1e-23)
+        # legel_node_mask &= (tar_edge_dst_y < 1e-13) & (tar_edge_dst_y > 1e-23)
+        # g.legal_node_mask = legal_node_mask.squeeze()
 
 
-            # print(f"\nProcessing dataset {name}, node types: {torch.unique(g.node_type)}")  # 显示过滤后的节点类型
-            # print(f"Node type counts: {torch.bincount(g.node_type)}")  # 各类型节点数量
+        print(f"\nProcessing dataset {name}, node types: {torch.unique(g.node_type)}")  # 显示过滤后的节点类型
+        print(f"Node type counts: {torch.bincount(g.node_type)}")  # 各类型节点数量
 
-            g.tar_edge_y = tar_edge_y[legel_edge_mask]# & legel_node_mask]
-            g.tar_edge_index = tar_edge_index[:, legel_edge_mask]# & legel_node_mask]
-            g.tar_edge_type = tar_edge_type[legel_edge_mask]# & legel_node_mask]
-            
-            # logging.info(f"we filter out the edges with Cc > 1e-15 and Cc < 1e-21 " + 
-            #              f"{legel_edge_mask.size(0)-legel_edge_mask.sum()}")
-            # logging.info(f"we filter out the edges with src/dst Cg > 1e-13 and Cg < 1e-23 " +
-            #              f"{legel_node_mask.size(0)-legel_node_mask.sum()}")
-
-            ## Calculate target edge type distributions (Cc_p2n : Cc_p2p : Cc_n2n)
-            _, g.tar_edge_dist = g.tar_edge_type.unique(return_counts=True)
-            print(f"DEBUG_SRAM: In sram_graph_load, g.name={g.name}, task_level={self.task_level}. Does g have tar_edge_dist? {hasattr(g, 'tar_edge_dist')}")
-            if hasattr(g, 'tar_edge_dist'):
-                print(f"DEBUG_SRAM: tar_edge_dist type: {type(g.tar_edge_dist)}, value: {g.tar_edge_dist}")
-            # print(f"DEBUG: sram_graph_load: {g.name}, tar_edge_dist 是否已设置: {hasattr(g, 'tar_edge_dist')}, 形状: {g.tar_edge_dist.shape if hasattr(g, 'tar_edge_dist') else 'N/A'}")
-            # assert 0
-            # print(f"g.tar_edge_dist:{g.tar_edge_dist}") #tensor([261027, 285103,  58461])
-            ## remove target edges from the original g
-            g.edge_type = g.edge_type[0:edge_offset]
-            g.edge_index = g.edge_index[:, 0:edge_offset]
-            
-            
-            #================================  画图:egde level =======================================
-            visualize_edge_label_distribution(g, name, self.class_boundaries)
+        g.tar_edge_y = tar_edge_y[legel_edge_mask]# & legel_node_mask]
+        g.tar_edge_index = tar_edge_index[:, legel_edge_mask]# & legel_node_mask]
+        g.tar_edge_type = tar_edge_type[legel_edge_mask]# & legel_node_mask]
         
+        # logging.info(f"we filter out the edges with Cc > 1e-15 and Cc < 1e-21 " + 
+        #              f"{legel_edge_mask.size(0)-legel_edge_mask.sum()}")
+        # logging.info(f"we filter out the edges with src/dst Cg > 1e-13 and Cg < 1e-23 " +
+        #              f"{legel_node_mask.size(0)-legel_node_mask.sum()}")
+
+        ## Calculate target edge type distributions (Cc_p2n : Cc_p2p : Cc_n2n)
+        _, g.tar_edge_dist = g.tar_edge_type.unique(return_counts=True)
+        # print(f"g.tar_edge_dist:{g.tar_edge_dist}") #tensor([261027, 285103,  58461])
+        ## remove target edges from the original g
+        g.edge_type = g.edge_type[0:edge_offset]
+        g.edge_index = g.edge_index[:, 0:edge_offset]
+        
+        visualize_edge_label_distribution(g, name, self.class_boundaries)
         ## convert to undirected edges
         if self.to_undirected:
                 g.edge_index, g.edge_type = to_undirected(
@@ -670,30 +668,55 @@ class SealSramDataset(InMemoryDataset):
         # print(f"self.raw_paths:{self.raw_paths}")
         # assert 0
         ## generate negative edges for the loaded graph
+        
+        # neg_edge_index, neg_edge_type = get_pos_neg_edges(
+        #     graph, neg_ratio=self.neg_edge_ratio)
+        
+        
+        ## sample a portion of pos/neg edges
+        # (
+        #     pos_edge_index, pos_edge_type, pos_edge_y,
+        #     neg_edge_index, neg_edge_type
+        # ) = get_balanced_edges(
+        #     graph, neg_edge_index, neg_edge_type, 
+        #     self.neg_edge_ratio, self.sample_rates[idx]
+        # )
+        # if self.task_level == 'edge' :
+        #     ## We only consider the positive edges in the regression task.
+        #     links = pos_edge_index  # [2, Np]
+        #     labels = pos_edge_y
+        # elif self.task_level == 'node':
+        #     # node classification
+        #     graph.y = graph.tar_node_y.squeeze()  # assume shape is [num_nodes]
+        # else:
+        #     raise ValueError(f"No defination of task {self.task_level} in this version!")
+        
         if self.task_level == 'edge':
-                # 1) 生成负样本
-                neg_edge_index, neg_edge_type = get_pos_neg_edges(
-                    graph, neg_ratio=self.neg_edge_ratio
-                )
-                # 2) 平衡正负样本
-                (
-                    pos_edge_index, pos_edge_type, pos_edge_y,
-                    neg_edge_index, neg_edge_type
-                ) = get_balanced_edges(
-                    graph,
-                    neg_edge_index,
-                    neg_edge_type,
-                    self.neg_edge_ratio,
-                    self.sample_rates[idx]
-                )
-                # 用于 LinkNeighborLoader 的字段
-                links = pos_edge_index
-                labels = pos_edge_y
+            # 1) 生成负样本
+            neg_edge_index, neg_edge_type = get_pos_neg_edges(
+                graph, neg_ratio=self.neg_edge_ratio
+            )
+            # 2) 平衡正负样本
+            (
+                pos_edge_index, pos_edge_type, pos_edge_y,
+                neg_edge_index, neg_edge_type
+            ) = get_balanced_edges(
+                graph,
+                neg_edge_index,
+                neg_edge_type,
+                self.neg_edge_ratio,
+                self.sample_rates[idx]
+            )
+            # 用于 LinkNeighborLoader 的字段
+            links = pos_edge_index
+            labels = pos_edge_y
+
         elif self.task_level == 'node':
-            # node classification
-            graph.y = graph.tar_node_y.squeeze()  # assume shape is [num_nodes]
+            # 节点分类任务：只设置 y，不触碰边逻辑
+            graph.y = graph.tar_node_y.squeeze()
+
         else:
-            raise ValueError(f"No defination of task {self.task_level} in this version!")
+            raise ValueError(f"No definition of task {self.task_level} in this version!")
         
         ## remove the redundant attributes in this version
         del graph.tar_node_y
@@ -812,8 +835,7 @@ def performat_SramDataset(dataset_dir, name,
             net_only=net_only,
             class_boundaries=class_boundaries
         )
-    # print(f"dataset:{dataset[0]}")
-    # assert 0
+
     elapsed = time.perf_counter() - start
     timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
             + f'{elapsed:.2f}'[-3:]
