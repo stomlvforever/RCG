@@ -109,9 +109,9 @@ class SealSramDataset(InMemoryDataset):
         self.data, self.slices = self.collate(data_list)
 
     def norm_nfeat(self, ntypes):
-        if self._data is None or self.slices is None:
-            self.data, self.slices = self.collate(self._data_list)
-            self._data_list = None
+        # if self._data is None or self.slices is None:
+        #     self.data, self.slices = self.collate(self._data_list)
+        #     self._data_list = None
         # 首先检查哪些节点类型实际存在
         existing_types = torch.unique(self._data.node_type)
         print(f"实际存在的节点类型: {existing_types}")
@@ -570,8 +570,8 @@ class SealSramDataset(InMemoryDataset):
         [2.0348e-20]])
         """
         if self.task_level == 'node' :
-            print(f"g.tar_node_y:{g.tar_node_y}")
-            assert 0
+            # print(f"g.tar_node_y:{g.tar_node_y}")
+            # assert 0
             legal_node_mask = (g.tar_node_y < 1e-15) & (g.tar_node_y > 1e-21)
             legal_node_mask = legal_node_mask.squeeze()
             print(f"(~legal_node_mask).sum().item():{(~legal_node_mask).sum().item()},legal_node_mask:{legal_node_mask.size()}") #(~legal_node_mask).sum().item():126659,legal_node_mask:torch.Size([249570])
