@@ -24,7 +24,6 @@ class GPSLayer(nn.Module):
                  log_attn_weights=False, g_drop=0.0, g_ffn=True,
                  res_linear=False, residual=False, task_level=None):
         super().__init__()
-
         self.hid_dim = hid_dim
         self.num_heads = num_heads
         self.attn_dropout = attn_dropout
