@@ -53,7 +53,7 @@ try:
             )
             if len(self.dataset) > 0:
                 first_graph = self.dataset[0]
-                # print(f"DEBUG_API: In PyGraphDataset __init__, after SealSramDataset, first_graph has tar_edge_dist? {hasattr(first_graph, 'tar_edge_dist')}")
+                print(f"DEBUG_API: In PyGraphDataset __init__, after SealSramDataset, first_graph has tar_edge_dist? {hasattr(first_graph, 'tar_edge_dist')}")
             else:
                 print("DEBUG_API: Dataset is empty after initialization.")  
                       
@@ -134,6 +134,7 @@ try:
                     )
                 else:
                     # edge 任务要用 LinkNeighborLoader
+                    print(f"g:{g}")
                     edge_idx   = g.edge_label_index[:, idx]
                     edge_label = g.edge_label[idx]
                     return LinkNeighborLoader(
@@ -665,6 +666,7 @@ async def get_dataset_split(request: DatasetRequest):
             dataset = dataset_cache[dataset_key]
         
         # 获取分割索引
+
         split_idx = dataset.get_idx_split()
         
         return {
@@ -707,6 +709,7 @@ async def get_dataloader(request: DatasetRequest, split_type: str = "train"):
             dataset = dataset_cache[dataset_key]
         
         # 获取分割和数据加载器
+        print(f"dataset:{dataset}")
         split_idx = dataset.get_idx_split()
         dataloader_info = dataset.get_dataloader(split_idx[split_type])
         
@@ -972,73 +975,6 @@ if __name__ == "__main__":
 
 # ==================== 使用示例 ====================
 """
-完整的使用流程，对应你的代码：
-
-1. 创建数据集（对应 dataset = PyGraphDataset(name="ssram", task="nodeclass")）:
-POST /api/dataset/create
-{
-    "name": "ssram",
-    "task": "nodeclass"
-}
-
-2. 获取数据分割（对应 split_idx = dataset.get_idx_split()）:
-POST /api/dataset/split
-{
-    "name": "ssram", 
-    "task": "nodeclass"
-}
-
-3. 获取数据加载器（对应 train_loader = dataset.get_dataloader(split_idx["train"])）:
-POST /api/dataset/dataloader?split_type=train
-{
-    "name": "ssram",
-    "task": "nodeclass"
-}
-
-4. 启动训练（使用你的完整训练流程）:
-POST /api/train
-{
-    "dataset_name": "ssram",
-    "task": "nodeclass",
-    "model": "gps_attention",
-    "epochs": 200,
-    "hid_dim": 144,
-    "global_model_type": "Transformer",
-    "local_gnn_type": "CustomGatedGCN"
-}
-
-5. 评估模型（对应 evaluator = Evaluator(name="ssram", task="nodeclass") 和 result_dict = evaluator.eval(input_dict)）:
-POST /api/evaluate
-{
-    "dataset_name": "ssram",
-    "task": "nodeclass", 
-    "y_true": [0, 1, 1, 0, 2, 1],
-    "y_pred": [0, 1, 0, 0, 2, 1]
-}
-
-6. 创建可视化（使用你的plot模块）:
-POST /api/visualize
-{
-    "dataset_name": "ssram",
-    "task_level": "node",
-    "class_boundaries": [0.2, 0.4, 0.6, 0.8]
-}
-
-7. 查看训练状态:
-GET /api/tasks/{task_id}
-
-8. 列出所有任务:
-GET /api/tasks?status=running&limit=10
-
-完整的Python客户端示例代码：
-
-```python
-import requests
-import json
-
-# API基础URL
-BASE_URL = "http://localhost:8000"
-
 def create_dataset(name, task):
     \"\"\"创建数据集 - 对应 PyGraphDataset(name="ssram", task="nodeclass")\"\"\"
     response = requests.post(f"{BASE_URL}/api/dataset/create", 
@@ -1088,69 +1024,6 @@ def get_task_status(task_id):
     response = requests.get(f"{BASE_URL}/api/tasks/{task_id}")
     return response.json()
 
-# 完整使用示例
-if __name__ == "__main__":
-    # 1. 创建数据集
-    print("创建数据集...")
-    dataset_result = create_dataset("ssram", "nodeclass")
-    print(f"数据集创建结果: {dataset_result}")
-    
-    # 2. 获取数据分割
-    print("获取数据分割...")
-    split_result = get_dataset_split("ssram", "nodeclass")
-    print(f"数据分割: train={len(split_result['split_idx']['train'])}, "
-          f"valid={len(split_result['split_idx']['valid'])}, "
-          f"test={len(split_result['split_idx']['test'])}")
-    
-    # 3. 获取数据加载器
-    print("创建数据加载器...")
-    dataloader_result = get_dataloader("ssram", "nodeclass", "train")
-    print(f"数据加载器: {dataloader_result}")
-    
-    # 4. 启动训练
-    print("启动训练...")
-    training_config = {
-        "dataset_name": "ssram",
-        "task": "nodeclass",
-        "model": "gps_attention",
-        "epochs": 10,  # 测试用较少epoch
-        "hid_dim": 144,
-        "global_model_type": "Transformer",
-        "local_gnn_type": "CustomGatedGCN",
-        "gpu": 0
-    }
-    
-    training_result = start_training(training_config)
-    task_id = training_result["task_id"]
-    print(f"训练任务ID: {task_id}")
-    
-    # 5. 监控训练进度
-    import time
-    while True:
-        status = get_task_status(task_id)
-        print(f"训练状态: {status['status']}, 进度: {status['progress']:.1f}%, 消息: {status['message']}")
-        
-        if status["status"] in ["completed", "failed"]:
-            break
-        
-        time.sleep(2)
-    
-    # 6. 如果训练成功，进行评估
-    if status["status"] == "completed":
-        print("训练完成，开始评估...")
-        
-        # 模拟预测结果
-        y_true = [0, 1, 2, 0, 1, 2, 1, 0]
-        y_pred = [0, 1, 1, 0, 1, 2, 1, 0]
-        
-        eval_result = evaluate_model("ssram", "nodeclass", y_true, y_pred)
-        print(f"评估结果: {eval_result['results']}")
-    
-    # 7. 创建可视化
-    print("创建可视化...")
-    viz_result = create_visualization("ssram", "node")
-    print(f"可视化结果: {viz_result}")
-```
 
 这个API完全模拟了你的代码结构和使用方式：
 
