@@ -31,10 +31,20 @@ def dataset_sampling(args, dataset, train_idx=None, val_idx=None):
     graph_idx = 0
     train_graph = dataset[graph_idx]
     # print(f"train_graph.y:{train_graph.y}")
+    # if args.task_level == 'node':
+    #     if args.net_only:
+    #         mask = train_graph.node_type == NET 
+    #         class_labels = train_graph.y[mask, 1]
+    #     else:
+    #         class_labels = train_graph.y[:, 1]
+        # get all node indices
+        
     if args.task_level == 'node':
         # train_graph.y 可能是：
         #  • 二维 tensor ([N,2], [原始值, 类别 id])
         #  • 一维 tensor ([N], 只有类别 id)
+        # print(f"train_graph.y.dim():{train_graph.y.dim()}")
+        # assert 0
         if train_graph.y.dim() > 1:
             # 分类时用第二列
             if args.net_only:
@@ -49,11 +59,7 @@ def dataset_sampling(args, dataset, train_idx=None, val_idx=None):
                 class_labels = train_graph.y[mask]
             else:
                 class_labels = train_graph.y
-        # get all node indices
-        # valid_mask = (train_graph.y[:, 0] > 1e-30)  # 假设第一列是原始值
-        # valid_nodes = np.where(valid_mask)[0]
-        # train_node_ind, val_node_ind = train_test_split(valid_nodes, test_size=0.2)
-        # 如果外部给了索引，就用外部的；否则再内部做一次随机 split
+
         if train_idx is not None and val_idx is not None:
             train_node_ind = train_idx
             val_node_ind   = val_idx
@@ -111,7 +117,9 @@ def dataset_sampling(args, dataset, train_idx=None, val_idx=None):
             )
     
     elif args.task_level == 'edge':
-        # edge_label 可能是一维（回归）或二维（分类时第一列连续、第二列类别）
+        # class_labels = train_graph.edge_label[:,1]
+        # print(f"train_graph.edge_label.dim()：{train_graph.edge_label.dim()}")
+        # assert 0
         if train_graph.edge_label.dim() > 1:
             # 分类任务：第二列是类别 id
             class_labels = train_graph.edge_label[:, 1]
@@ -119,6 +127,7 @@ def dataset_sampling(args, dataset, train_idx=None, val_idx=None):
         else: #仅用于api函数
             # 回归任务：一维 tensor
             class_labels = train_graph.edge_label
+        
         ## get split for validation
         train_ind, val_ind = train_test_split(
             np.arange(train_graph.edge_label.size(0)), 
