@@ -7,7 +7,7 @@
 
 
 ## 📑 Table of Contents
-- [🔍 Overview](#Overview)
+- [Overview](#Overview)
 - [Repository Structure](#repository-structure)
 - [Installation](#installation)
 - [Usage](#usage)
