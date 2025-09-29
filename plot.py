@@ -149,3 +149,143 @@ def plot_edge_label_distribution(edge_labels: np.ndarray, class_boundaries: np.n
     plt.title("Edge Label Class Distribution")
     plt.tight_layout()
     plt.show()
+    
+def visualize_tar_edge_y_distribution(tar_edge_y, name, save_dir='imgs'):
+    """
+    可视化tar_edge_y数据的分布情况，包括直方图、箱线图、密度图和累积分布图。
+        
+    Args:
+        tar_edge_y: torch.Tensor, 边的电容值数据
+        name: str, 数据集名称，用于文件命名
+        save_dir: str, 保存目录，默认为'imgs'
+        
+    Returns:
+        dict: 包含统计信息和过滤分析的字典
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import os
+    
+    # 确保保存目录存在
+    os.makedirs(save_dir, exist_ok=True)
+    
+    norm = 0
+    
+    if norm == 1:
+        '''归一化方式 1 '''
+        # tar_edge_y /= 300
+
+        '''归一化方式 2 '''
+        edge_min = tar_edge_y.min()
+        edge_max = tar_edge_y.max()
+        # 最大值减最小值的归一化
+        if edge_max > edge_min:  # 避免除零错误
+            tar_edge_y = (tar_edge_y - edge_min) / (edge_max - edge_min)      
+                
+        tar_edge_y[tar_edge_y < 0] = 0.0
+        tar_edge_y[tar_edge_y > 1] = 1.0    
+    # 将tensor转换为numpy数组
+    
+    tar_edge_y_np = tar_edge_y.detach().cpu().numpy()
+    
+    # 创建分布图
+    plt.figure(figsize=(12, 8))
+    
+    # 子图1: 直方图 - 应用新的颜色配置
+    plt.subplot(2, 2, 1)
+    ax1 = plt.gca()
+    ax1.set_facecolor('lightgray')          # Plot area
+    plt.gcf().set_facecolor('white')       # Figure background
+    
+    plt.hist(tar_edge_y_np, bins=50, density=True, color='orange', edgecolor='white')
+    plt.title('tar_edge_y Distribution (Histogram)')
+    plt.xlabel('Capacitance Value')
+    plt.ylabel('Density')
+    ax1.grid(True, color='white', linestyle='-', linewidth=0.5)
+    
+    # 子图2: 箱线图
+    plt.subplot(2, 2, 2)
+    plt.boxplot(tar_edge_y_np)
+    plt.title('tar_edge_y Distribution (Boxplot)')
+    plt.ylabel('Capacitance Value')
+    plt.grid(True, alpha=0.3)
+    
+    # 子图3: 密度图
+    plt.subplot(2, 2, 3)
+    plt.hist(tar_edge_y_np, bins=50, density=True, alpha=0.7, color='green', edgecolor='black')
+    plt.title('tar_edge_y Density Distribution')
+    plt.xlabel('Capacitance Value')
+    plt.ylabel('Density')
+    plt.grid(True, alpha=0.3)
+    
+    # 子图4: 累积分布
+    plt.subplot(2, 2, 4)
+    sorted_data = np.sort(tar_edge_y_np)
+    y_vals = np.arange(1, len(sorted_data) + 1) / len(sorted_data)
+    plt.plot(sorted_data, y_vals, color='red', linewidth=2)
+    plt.title('tar_edge_y Cumulative Distribution')
+    plt.xlabel('Capacitance Value')
+    plt.ylabel('Cumulative Probability')
+    plt.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    
+    # 使用数据集名称作为文件名，保存到imgs目录
+    if norm == 1:
+        save_path = f'{save_dir}/after_norm_tar_edge_y_dist_{name}.png'
+    else:
+        save_path = f'{save_dir}/tar_edge_y_dist_{name}.png'
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()  # 使用close()而不是show()，避免在服务器环境中显示图形
+    
+    # 计算统计信息
+    # stats = {
+    #     'count': len(tar_edge_y_np),
+    #     'min': tar_edge_y_np.min(),
+    #     'max': tar_edge_y_np.max(),
+    #     'mean': tar_edge_y_np.mean(),
+    #     'median': np.median(tar_edge_y_np),
+    #     'std': tar_edge_y_np.std(),
+    #     'q25': np.percentile(tar_edge_y_np, 25),
+    #     'q75': np.percentile(tar_edge_y_np, 75)
+    # }
+    
+    # # 检查当前过滤条件的影响
+    # current_filter = (tar_edge_y < 1e-15) & (tar_edge_y > 1e-21)
+    # filtered_count = current_filter.sum().item()
+    
+    # filter_analysis = {
+    #     'current_condition': '1e-21 < value < 1e-15',
+    #     'filtered_count': filtered_count,
+    #     'total_count': len(tar_edge_y_np),
+    #     'retention_rate': filtered_count / len(tar_edge_y_np) * 100,
+    #     'suggested_min': tar_edge_y_np.min() * 0.9,
+    #     'suggested_max': tar_edge_y_np.max() * 1.1
+    # }
+    
+    # 打印统计信息
+    # print(f"\n=== tar_edge_y 统计信息 ===")
+    # print(f"数据点数量: {stats['count']}")
+    # print(f"最小值: {stats['min']:.4f}")
+    # print(f"最大值: {stats['max']:.4f}")
+    # print(f"平均值: {stats['mean']:.4f}")
+    # print(f"中位数: {stats['median']:.4f}")
+    # print(f"标准差: {stats['std']:.4f}")
+    # print(f"25%分位数: {stats['q25']:.4f}")
+    # print(f"75%分位数: {stats['q75']:.4f}")
+    
+    # print(f"\n=== 过滤条件分析 ===")
+    # print(f"当前过滤条件: {filter_analysis['current_condition']}")
+    # print(f"满足条件的数据点: {filter_analysis['filtered_count']} / {filter_analysis['total_count']}")
+    # print(f"过滤后保留比例: {filter_analysis['retention_rate']:.2f}%")
+    
+    # print(f"\n=== 建议的过滤条件 ===")
+    # print(f"建议范围: {filter_analysis['suggested_min']:.1f} < value < {filter_analysis['suggested_max']:.1f}")
+    
+    # print(f"\n图片已保存到: {save_path}")
+    
+    # return {
+    #     'statistics': stats,
+    #     'filter_analysis': filter_analysis,
+    #     'save_path': save_path
+    # }

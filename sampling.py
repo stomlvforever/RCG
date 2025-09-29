@@ -10,11 +10,12 @@ import os
 import pickle
 from collections import Counter
 from torch_geometric.data import HeteroData
+from torch_geometric.data import Batch
 NET = 0
 DEV = 1
 PIN = 2
 
-def dataset_sampling(args, dataset, train_idx=None, val_idx=None):
+def dataset_sampling_r(args, dataset, train_idx=None, val_idx=None):
     """ 
     Sampling subgraphs for each graph in dataset
     Args:
@@ -27,10 +28,23 @@ def dataset_sampling(args, dataset, train_idx=None, val_idx=None):
     val_idx   (Tensor or list, optional): 从 API 传入的验证节点/边索引
     """
 
-    ## default training data come from the first dataset
+    # ## default training data come from the first dataset
+    
     graph_idx = 0
-    train_graph = dataset[graph_idx]
-    # print(f"train_graph.y:{train_graph.y}")
+    graph_idx_1 = 1
+    # # graph_idx_2 = 2
+    train_graph_0 = dataset[graph_idx]
+    train_graph_1 = dataset[graph_idx_1]
+    # train_graph_2 = dataset[graph_idx_2]
+
+    train_graph = Batch.from_data_list([train_graph_0, train_graph_1])
+    
+    #graph_idx = 0
+    #train_graph = dataset[graph_idx]
+    
+    # print(f"train_graph:{train_graph}")
+    # assert 0
+    
     # if args.task_level == 'node':
     #     if args.net_only:
     #         mask = train_graph.node_type == NET 
@@ -90,7 +104,7 @@ def dataset_sampling(args, dataset, train_idx=None, val_idx=None):
         )
        
         test_loaders = {}
-        for i in range(1, len(dataset)):
+        for i in range(2, len(dataset)):
             test_graph = dataset[i]
             graph_name = test_graph.name
 
@@ -123,11 +137,172 @@ def dataset_sampling(args, dataset, train_idx=None, val_idx=None):
         if train_graph.edge_label.dim() > 1:
             # 分类任务：第二列是类别 id
             class_labels = train_graph.edge_label[:, 1]
-            
+            # assert 0
         else: #仅用于api函数
             # 回归任务：一维 tensor
             class_labels = train_graph.edge_label
         
+        ## get split for validation
+        train_ind, val_ind = train_test_split(
+            np.arange(train_graph.edge_label.size(0)), 
+            test_size=0.2, shuffle=True, #stratify=stratify,
+        )
+        train_ind = torch.tensor(train_ind, dtype=torch.long)
+        val_ind = torch.tensor(val_ind, dtype=torch.long)
+
+        train_edge_label_index = train_graph.edge_label_index[:, train_ind]
+        train_edge_label = train_graph.edge_label[train_ind]
+
+        ## Create the dataloaders for training dataset
+        train_loader = LinkNeighborLoader(
+            train_graph,
+            num_neighbors=args.num_hops * [args.num_neighbors],
+            edge_label_index=train_edge_label_index,
+            edge_label=train_edge_label,
+            subgraph_type='bidirectional',
+            disjoint=True,
+            batch_size=args.batch_size,
+            shuffle=False, 
+            num_workers=args.num_workers,
+        )
+
+        val_edge_label_index = train_graph.edge_label_index[:, val_ind]
+        val_edge_label = train_graph.edge_label[val_ind]
+
+        ## Create the dataloaders for validation dataset
+        val_loader = LinkNeighborLoader(
+            train_graph,
+            num_neighbors=args.num_hops * [args.num_neighbors],
+            edge_label_index=val_edge_label_index,
+            edge_label=val_edge_label,
+            subgraph_type='bidirectional',
+            disjoint=True,
+            batch_size=args.batch_size,
+            shuffle=False, 
+            num_workers=args.num_workers,
+        )
+
+        test_loaders = {}
+
+        ## The remaining datasets are all used for testing
+        for i in range(2, len(dataset.names)):
+            test_graph = dataset[i]
+            graph_name = test_graph.name
+           
+           # edge sampling is completed in get_balanced_edges
+            test_input_edge_labels = test_graph.edge_label
+            test_edge_label_index = test_graph.edge_label_index
+
+            test_edge_label = test_input_edge_labels
+
+            ## Create the dataloaders for each test dataset
+            test_loaders[graph_name] = \
+                LinkNeighborLoader(
+                    test_graph,
+                    num_neighbors=args.num_hops * [args.num_neighbors],
+                    edge_label_index=test_edge_label_index,
+                    edge_label=test_edge_label,
+                    subgraph_type='bidirectional',
+                    disjoint=True,
+                    batch_size=args.batch_size,
+            shuffle=False, 
+            num_workers=args.num_workers,
+        )
+            
+    else:
+        raise ValueError(f"Invalid task level: {args.task_level}")
+    
+    if isinstance(class_labels, torch.Tensor):
+        class_labels = class_labels.cpu().numpy().tolist()
+    #print("class_labels", class_labels)
+    # label_counts = Counter(class_labels)
+    # print("label_counts", label_counts)
+    # max_label = max(label_counts, key=label_counts.get)
+    # print(f"The most common label in the training set is: {max_label}, with {label_counts[max_label]} samples")
+    max_label = None
+    return (train_loader, val_loader, test_loaders, max_label)
+
+def dataset_sampling_c(args, dataset):
+    """ 
+    Sampling subgraphs for each graph in dataset
+    Args:
+        args (argparse.Namespace): The arguments
+        dataset (torch_geometric.data.InMemoryDataset): The dataset
+    Return:
+        train_loader, val_loader, test_loaders
+    """
+
+    ## default training data come from the first dataset
+    graph_idx = 0
+    train_graph = dataset[graph_idx]
+    # print(f"train_graph.y:{train_graph.y}")
+    if args.task_level == 'node':
+        if args.net_only:
+            mask = train_graph.node_type == NET 
+            class_labels = train_graph.y[mask, 1]
+        else:
+            class_labels = train_graph.y[:, 1]
+        # get all node indices
+        # valid_mask = (train_graph.y[:, 0] > 1e-30)  # 假设第一列是原始值
+        # valid_nodes = np.where(valid_mask)[0]
+        # train_node_ind, val_node_ind = train_test_split(valid_nodes, test_size=0.2)
+        all_nodes = np.arange(train_graph.y.size(0))
+        # print(f"train_graph.y:{train_graph.y},train_graph.y[:, 0]:{train_graph.y[:, 0]}")
+        # assert 0       
+        # split training and validation set
+        train_node_ind, val_node_ind = train_test_split(
+            all_nodes, test_size=0.2, shuffle=True
+        )
+        # convert to tensor
+        train_node_ind = torch.tensor(train_node_ind, dtype=torch.long)
+        val_node_ind = torch.tensor(val_node_ind, dtype=torch.long)
+    
+        train_loader = NeighborLoader(
+            train_graph,
+            num_neighbors=args.num_hops * [args.num_neighbors],
+            input_nodes=train_node_ind,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=args.num_workers,
+        )
+        val_loader = NeighborLoader(
+            train_graph,
+            num_neighbors=args.num_hops * [args.num_neighbors],
+            input_nodes=val_node_ind,
+            batch_size=args.batch_size,
+            shuffle=False,
+            num_workers=args.num_workers,
+        )
+       
+        test_loaders = {}
+        for i in range(1, len(dataset)):
+            test_graph = dataset[i]
+            graph_name = test_graph.name
+
+            all_nodes = np.arange(test_graph.num_nodes)
+            all_test_nodes = torch.arange(test_graph.num_nodes)
+            
+            if graph_name == 'sandwich' or graph_name == 'ultra8t':
+                # random sample all test nodes
+                sampled_size = max(1, int(test_graph.num_nodes *args.large_dataset_sample_rates))
+                perm = torch.randperm(test_graph.num_nodes)
+                test_input_nodes = all_test_nodes[perm[:sampled_size]]
+            else:
+                sampled_size = max(1, int(test_graph.num_nodes *args.small_dataset_sample_rates))
+                perm = torch.randperm(test_graph.num_nodes)
+                test_input_nodes = all_test_nodes[perm[:sampled_size]]
+
+            test_loaders[graph_name] = NeighborLoader(
+                test_graph,
+                num_neighbors=args.num_hops * [args.num_neighbors],
+                input_nodes=test_input_nodes,
+                batch_size=args.batch_size,
+                shuffle=False,
+                num_workers=args.num_workers,
+            )
+    
+    elif args.task_level == 'edge':
+        class_labels = train_graph.edge_label[:,1]
         ## get split for validation
         train_ind, val_ind = train_test_split(
             np.arange(train_graph.edge_label.size(0)), 
@@ -206,6 +381,4 @@ def dataset_sampling(args, dataset, train_idx=None, val_idx=None):
     max_label = max(label_counts, key=label_counts.get)
     print(f"The most common label in the training set is: {max_label}, with {label_counts[max_label]} samples")
 
-    return (train_loader, val_loader, test_loaders, max_label)
-
-  
+    return (train_loader, val_loader, test_loaders, max_label)  

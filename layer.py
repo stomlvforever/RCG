@@ -8,7 +8,31 @@ from torch_geometric.graphgym.register import register_layer
 from torch_scatter import scatter
 from torch_geometric.graphgym import cfg
 
+# 初始化 GraphGym 的 act_dict（如果是空的）
+if not hasattr(register, 'act_dict') or len(register.act_dict) == 0:
+    register.act_dict = {}
 
+# 添加所有标准激活函数
+standard_activations = {
+    'relu': nn.ReLU,
+    'prelu': nn.PReLU,
+    'leaky_relu': nn.LeakyReLU,
+    'tanh': nn.Tanh, 
+    'sigmoid': nn.Sigmoid,
+    'elu': nn.ELU,
+    'gelu': nn.GELU,
+    'selu': nn.SELU,
+    'softplus': nn.Softplus,
+    'softsign': nn.Softsign,
+    'hardtanh': nn.Hardtanh,
+    'relu6': nn.ReLU6
+}
+
+# 将标准激活函数添加到 register.act_dict
+for name, activation_class in standard_activations.items():
+    if name not in register.act_dict:
+        register.act_dict[name] = activation_class
+        
 class GatedGCNLayer(pyg_nn.conv.MessagePassing):
     """
         GatedGCN layer

@@ -14,18 +14,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="CircuitGCL")
     # Task setting
     parser.add_argument("--task_level", type=str, default="edge", help="Task level. 'node' or 'edge'.")
-    parser.add_argument("--task", type=str, default="regression", help="Task type. 'classification' or 'regression'.")
+    parser.add_argument("--task_type", type=str, default="resister", help="Task type. 'resister' or 'capacitance'.")
+    parser.add_argument("--task", type=str, default="classification", help="Task type. 'classification' or 'regression'.")
     
     # Dataset setting
-    parser.add_argument("--dataset", type=str, default="ssram+digtime+timing_ctrl+array_128_32_8t+ultra8t+sandwich", help="Names of datasets.") # the first dataset is the training dataset
-    parser.add_argument('--neg_edge_ratio',type=float,default=0.5,help='The ratio of negative edges.') # 0.0 for classification, 0.5 for regression
+    parser.add_argument("--dataset", type=str, default="ultra8t+ssram+sandwich+digtime+array_128_32_8t+timing_ctrl", choices=['ultra8t', 'sandwich', 'digtime', 'ssram', 'timing_ctrl', 'array_128_32_8t'],
+                        help="Names of datasets.") # the first dataset is the training dataset
+    parser.add_argument('--neg_edge_ratio',type=float,default=0.0,help='The ratio of negative edges.') # 0.0 for classification, 0.5 for regression
     parser.add_argument('--net_only',type=int,default=0,help='Only use net nodes for node level task or not.')
 
     # Graph sampling setting
     parser.add_argument("--small_dataset_sample_rates", type=float, default=1.0, help="The sample rate for small dataset.")
-    parser.add_argument("--large_dataset_sample_rates", type=float, default=0.01, 
+    parser.add_argument("--large_dataset_sample_rates", type=float, default=1.0, 
                         help='Target edge num of large dataset. 20% for large G')
-    parser.add_argument("--num_hops", type=int, default=4, help="Number of hops in subgraph sampling.")
+    parser.add_argument("--num_hops", type=int, default=2, help="Number of hops in subgraph sampling.")
     parser.add_argument('--num_neighbors',type=int,default=64,help='The number of neighbors in subgraph sampling.')
     
     # Training setting
@@ -34,7 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--gpu", type=int, default=0, help="GPU index. Default: -1, using cpu.")
     parser.add_argument("--epochs", type=int, default=200, help="Training epochs.")
     parser.add_argument("--batch_size", type=int, default=128, help="The batch size.")
-    parser.add_argument("--lr", type=float, default=0.0001, help="Learning rate.")
+    parser.add_argument("--lr", type=float, default=0.00002, help="Learning rate.")
 
     # SGRL arguments
     parser.add_argument('--sgrl', type=int, default=0, help='Enable contrastive learning, i.e., SGRL.')
@@ -57,8 +59,8 @@ if __name__ == "__main__":
     
     ## global attention setting
     parser.add_argument("--attn_dropout", type=float, default=0.7, help='Dropout for attentional networks')
-    parser.add_argument("--global_model_type", type=str, default='Transformer', choices=['Transformer' ,'BiasedTransformer', 'None'], help='Global attention mechanism settings')
-    parser.add_argument("--local_gnn_type", type=str, default='CustomGatedGCN', choices=['GCN', 'GIN', 'GINE', 'GENConv', 'GAT', 'PNA', 'CustomGatedGCN', 'CustomGCNConv', 'CustomGINEConv'], help='The setting of the global attention GNN layer')
+    parser.add_argument("--global_model_type", type=str, default='None', choices=['Transformer' ,'BiasedTransformer', 'None'], help='Global attention mechanism settings')
+    parser.add_argument("--local_gnn_type", type=str, default='CustomGCNConv', choices=['GCN', 'GIN', 'GINE', 'GENConv', 'GAT', 'PNA', 'CustomGatedGCN', 'CustomGCNConv', 'CustomGINEConv'], help='The setting of the global attention GNN layer')
     parser.add_argument("--num_heads", type=int, default=2, help='The number of heads in multi-head attention')
     parser.add_argument("--layer_norm", type=int, default=0, help='Whether to use layer_norm in GNN+, if you use the attention mechanism, layernorm and batchnorm cannot both be equal to 1.')
     parser.add_argument("--batch_norm", type=int, default=1, help='Whether to use batch_norm in GNN+, if you use the attention mechanism, layernorm and batchnorm cannot both be equal to 1.')
@@ -77,7 +79,7 @@ if __name__ == "__main__":
     parser.add_argument('--dropout', type=float, default=0.3, help='Dropout for neural networks.')
     parser.add_argument('--use_bn', type=int, default=0, help='0 or 1. Batch norm for neural networks.')
     parser.add_argument('--act_fn', default='prelu', choices=['relu', 'elu', 'tanh', 'leakyrelu', 'prelu'], help='Activation function')
-    parser.add_argument('--use_stats', type=int, default=1, help='0 or 1. Circuit statistics features. Use in node task.')
+    parser.add_argument('--use_stats', type=int, default=0, help='0 or 1. Circuit statistics features. Use in node task.')
 
     # Regression setting
     parser.add_argument('--src_dst_agg', type=str, default='concat',choices=['concat', 'add', 'pooladd', 'poolmean', 'globalattn'],help="The way to aggregate nodes.")
@@ -85,8 +87,8 @@ if __name__ == "__main__":
     
     # Classification setting
     parser.add_argument('--class_loss',type=str,default='cross_entropy',choices=['bsmCE','focal','cross_entropy'],help='The loss function for classification.')
-    parser.add_argument('--num_classes',type=int,default=5,help='The number of classes for node classification.')
-    parser.add_argument('--class_boundaries',type=list,default=[0.2,0.4,0.6,0.8],help='The boundaries for classification.')
+    parser.add_argument('--num_classes',type=int,default=3,help='The number of classes for node classification.')
+    parser.add_argument('--class_boundaries',type=list,default=[0.5],help='The boundaries for classification.')
 
     # Balanced MSE setting for GAI implementation
     parser.add_argument("--noise_sigma", type=float, default=0.001, help="The simga_noise of Balanced MSE (EQ 3.6).")
@@ -111,28 +113,28 @@ if __name__ == "__main__":
     #set log file
     
     # create log file
-    # if not os.path.exists(args.log_dir):
-    #     os.makedirs(args.log_dir, exist_ok=True)
-    # timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    # if args.task == 'classification':
-    #     log_filename = os.path.join(args.log_dir, f"{timestamp}_{args.task_level}_{args.task}_{args.dataset}_loss{args.class_loss}_batch{args.batch_size}_{args.src_dst_agg}.txt")
-    # else: # regression task
-    #     log_filename = os.path.join(args.log_dir, f"{timestamp}_{args.task_level}_{args.task}_{args.dataset}_loss{args.regress_loss}_batch{args.batch_size}_{args.src_dst_agg}.txt")
-    # log_file = open(log_filename, 'w')
+    if not os.path.exists(args.log_dir):
+        os.makedirs(args.log_dir, exist_ok=True)
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    if args.task == 'classification':
+        log_filename = os.path.join(args.log_dir, f"{timestamp}_{args.task_level}_{args.task}_{args.dataset}_loss{args.class_loss}_batch{args.batch_size}_{args.src_dst_agg}.txt")
+    else: # regression task
+        log_filename = os.path.join(args.log_dir, f"{timestamp}_{args.task_level}_{args.task}_{args.dataset}_loss{args.regress_loss}_batch{args.batch_size}_{args.src_dst_agg}.txt")
+    log_file = open(log_filename, 'w')
     
-    # # Redirect standard output to both file and console
-    # class Tee(object):
-    #     def __init__(self, *files):
-    #         self.files = files
-    #     def write(self, obj):
-    #         for f in self.files:
-    #             f.write(obj)
-    #             f.flush()
-    #     def flush(self):
-    #         for f in self.files:
-    #             f.flush()
-    # original_stdout = sys.stdout
-    # sys.stdout = Tee(original_stdout, log_file)
+    # Redirect standard output to both file and console
+    class Tee(object):
+        def __init__(self, *files):
+            self.files = files
+        def write(self, obj):
+            for f in self.files:
+                f.write(obj)
+                f.flush()
+        def flush(self):
+            for f in self.files:
+                f.flush()
+    original_stdout = sys.stdout
+    sys.stdout = Tee(original_stdout, log_file)
 
 
     # Check cuda
@@ -149,11 +151,12 @@ if __name__ == "__main__":
     # STEP 1: Load Dataset =================================================================== #
     dataset = performat_SramDataset(
         name=args.dataset, 
-        dataset_dir='./datasets/', 
+        dataset_dir='./datasets/', #or dataset_dir='./datasets/',
         neg_edge_ratio=args.neg_edge_ratio,
         to_undirected=True,
         small_dataset_sample_rates=args.small_dataset_sample_rates,
         large_dataset_sample_rates=args.large_dataset_sample_rates,
+        task_type=args.task_type,
         task_level=args.task_level,
         net_only=args.net_only,
         class_boundaries=args.class_boundaries

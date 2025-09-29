@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from sklearn.metrics import (
     accuracy_score, f1_score, precision_score, recall_score,
-    roc_auc_score,
+    roc_auc_score,balanced_accuracy_score,
     mean_absolute_error, mean_squared_error,
     root_mean_squared_error, r2_score,
 )
@@ -10,17 +10,11 @@ import numpy as np
 import time
 from tqdm import tqdm
 from model import GraphHead
-from sampling import dataset_sampling
-# from balanced_mse import GAILoss, BMCLoss, BNILoss, train_gmm, WeightedMSE, get_lds_weights, BalancedSoftmax, FocalLoss, compute_class_weights
+from sampling import dataset_sampling_c,dataset_sampling_r
+
 import os
 import matplotlib.pyplot as plt
 from torch.optim.lr_scheduler import StepLR
-# from torch.utils.data.sampler import SubsetRandomSampler
-# from sram_dataset import LinkPredictionDataset
-# from sram_dataset import collate_fn, adaption_for_sgrl
-# from torch_geometric.data import Batch
-
-# from torch_geometric.loader import NeighborLoader, GraphSAINTRandomWalkSampler, GraphSAINTEdgeSampler, ShaDowKHopSampler
 
 NET = 0
 DEV = 1
@@ -185,7 +179,7 @@ def eval_epoch(args, loader, model, device,
                                 batch_size=_true.size(0),
                                 loss=loss.detach().cpu().item(),
                                 )
-    return logger.write_epoch(split)
+    return logger.write_epoch(split),logger
 
 def regress_train(args, regressor, optimizer, criterion,
           train_loader, val_loader, test_loaders, max_label,
@@ -232,9 +226,10 @@ def regress_train(args, regressor, optimizer, criterion,
                 loss=loss.detach().cpu().item()
             )
 
+
         logger.write_epoch(split='train')
         ## ========== validation ========== ##
-        val_res = eval_epoch(
+        val_res, val_logger = eval_epoch(
             args, val_loader, 
             regressor, device, split='val', criterion=criterion
         )
@@ -251,7 +246,7 @@ def regress_train(args, regressor, optimizer, criterion,
            
             ## ========== testing on other datasets ========== ##
             for test_name in test_loaders.keys():
-                res = eval_epoch(
+                res, test_logger = eval_epoch(
                     args, test_loaders[test_name], 
                     regressor, device, split='test', 
                     criterion=criterion
@@ -259,7 +254,7 @@ def regress_train(args, regressor, optimizer, criterion,
                 test_results.append(res)
             os.makedirs("downstream_model", exist_ok=True)
             torch.save(regressor.state_dict(), f"downstream_model/model_{epoch}-{args.regress_loss}.pth")
-
+        
         if best_results['best_epoch'] == epoch:
             best_results['test_results'] = test_results
 
@@ -267,7 +262,7 @@ def regress_train(args, regressor, optimizer, criterion,
         print(f" Best epoch: {best_results['best_epoch']}, mse: {best_results['best_val_mse']}, loss: {best_results['best_val_loss']}")
         print(f" Test results: {[res for res in best_results['test_results']]}")
         print( "=====================================")
-
+      
 def class_train(args, classifier,optimizer_classifier, 
           train_loader, val_loader, test_loaders, max_label,
           device, scheduler=None):
@@ -348,12 +343,13 @@ def class_train(args, classifier,optimizer_classifier,
                 loss=class_loss if isinstance(class_loss, float) else class_loss.detach().cpu().item()
             )
 
+        #plot_regression_scatter(logger._pred, logger._true, epoch, "train", save_dir="classification_results")
         print(f"\n===== Epoch {epoch}/{args.epochs} - Elapsed: {time.time() - epoch_start_time:.2f}s =====")
         print("Classification results:")
         logger.write_epoch(split='train')
         
         ## ========== validation ========== ##
-        val_class_res = eval_epoch(
+        val_class_res, val_logger = eval_epoch(
             args, val_loader,
             classifier, device, split='val', criterion=criterion
         )
@@ -374,7 +370,7 @@ def class_train(args, classifier,optimizer_classifier,
         if eval_flag :
             for test_name in test_loaders.keys():
                 print(test_name)
-                test_class_res = eval_epoch(
+                test_class_res, test_logger = eval_epoch(
                     args, test_loaders[test_name], 
                     classifier, device, split='test', criterion=criterion
                 )
@@ -398,44 +394,20 @@ def downstream_train(args, dataset, device, cl_embeds=None):
     if args.sgrl:
         dataset.set_cl_embeds(cl_embeds)
 
-    dataset.norm_nfeat([NET, DEV])
-    # print(f"dataset.norm_nfeat([NET, DEV]):{dataset.norm_nfeat([NET, DEV])}")
-    # assert 0
+    dataset.norm_nfeat([NET, DEV],args.task_type)
 
-    
-    
     # Subgraph sampling for each dataset graph & PE calculation
-    (
-        train_loader, val_loader, test_loaders, max_label
-    ) = dataset_sampling(args, dataset)
-
+    if args.task_type == 'capacitance':
+        (
+            train_loader, val_loader, test_loaders, max_label
+        ) = dataset_sampling_c(args, dataset)
+    elif args.task_type == 'resister':
+        (
+            train_loader, val_loader, test_loaders, max_label
+        ) = dataset_sampling_r(args, dataset)
 
     if args.task == 'regression':
-        # set the loss function for regression
-        # if args.regress_loss == 'gai':
-        #     gmm_path = train_gmm(dataset)
-        #     criterion = GAILoss(init_noise_sigma=args.noise_sigma, gmm=gmm_path, device=device)
-        # elif args.regress_loss == 'bmc':
-        #     criterion = BMCLoss(init_noise_sigma=args.noise_sigma, device=device)
-        # elif args.regress_loss == 'bni':
-        #     _, bin_edges, bin_count = get_lds_weights(
-        #         dataset._data.edge_label[:, 1], 
-        #         args.lds_kernel, args.lds_ks, args.lds_sigma
-        #     )
-        #     criterion = BNILoss(args.noise_sigma, bin_edges, bin_count,  device=device)
-        # elif args.regress_loss == 'mse':
-        #     criterion = torch.nn.MSELoss(reduction='mean')
-        # elif args.regress_loss == 'lds':
-        #     weights, _, _ = get_lds_weights(
-        #         dataset._data.edge_label[:, 1], 
-        #         args.lds_kernel, args.lds_ks, args.lds_sigma
-        #     )
-        #     dataset._data.edge_label[:, 1] = weights
-        #     criterion = WeightedMSE()
-        # else:
-        #     raise ValueError(f"Loss func {args.regress_loss} not supported!")
         criterion = torch.nn.MSELoss(reduction='mean')
-        
         
         start = time.time()
         model = GraphHead(args)

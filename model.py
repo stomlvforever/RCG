@@ -90,14 +90,22 @@ class GraphHead(nn.Module):
         ## Node attributes are {0, 1, 2} for net, device, and pin
         ## Node / Edge type encoders.
         ## Node attributes are {0, 1, 2} for net, device, and pin
-        node_type_vocab_size = getattr(args, 'node_type_vocab_size', 4)
-        self.node_encoder = nn.Embedding(num_embeddings=node_type_vocab_size,
-                                        embedding_dim=node_embed_dim)
+        if args.task_type == 'resister':
+            node_type_vocab_size = getattr(args, 'node_type_vocab_size', 4)
+            self.node_encoder = nn.Embedding(num_embeddings=node_type_vocab_size,
+                                            embedding_dim=node_embed_dim)
 
-        ## Edge attributes - 使用动态大小
-        edge_type_vocab_size = getattr(args, 'edge_type_vocab_size', 4)
-        self.edge_encoder = nn.Embedding(num_embeddings=edge_type_vocab_size,
-                                        embedding_dim=hidden_dim)
+            ## Edge attributes - 使用动态大小
+            edge_type_vocab_size = getattr(args, 'edge_type_vocab_size', 4)
+            self.edge_encoder = nn.Embedding(num_embeddings=edge_type_vocab_size,
+                                            embedding_dim=hidden_dim)
+        elif args.task_type == 'capacitance':
+            ## Node attributes are {0, 1, 2} for net, device, and pin
+            self.node_encoder = nn.Embedding(num_embeddings=4,
+                                            embedding_dim=node_embed_dim)
+            ## Edge attributes are {0, 1} for 'device-pin' and 'pin-net' edges
+            self.edge_encoder = nn.Embedding(num_embeddings=4,
+                                            embedding_dim=hidden_dim)
 
         
         # GNN layers
@@ -125,29 +133,6 @@ class GraphHead(nn.Module):
                     norm=None,
                 )
                 self.layers.append(GINEConv(mlp, train_eps=True, edge_dim=hidden_dim))
-            # elif args.model == 'CustomGatedGCN':
-            #     self.layers.append(GatedGCNLayer(in_dim=hidden_dim, 
-            #                                     out_dim=hidden_dim,
-            #                                 dropout=g_drop,
-            #                                 residual=residual,
-            #                                 ffn=g_ffn,
-            #                                 batch_norm=g_bn,
-            #                                 ))
-            # elif args.model == 'CustomGCNConv':
-            #     self.layers.append(GCNConvLayer(dim_in=hidden_dim, 
-            #                                     dim_out=hidden_dim,
-            #                                 dropout=g_drop,
-            #                                 residual=residual,
-            #                                 ffn=g_ffn,
-            #                                 batch_norm=g_bn,
-            #                                 ))
-            # elif args.model == 'CustomGINEConv':
-            #     self.layers.append(GINEConvLayer(dim_in=hidden_dim, 
-            #                                     dim_out=hidden_dim,
-            #                                 dropout=g_drop,
-            #                                 residual=residual,
-            #                                 ffn=g_ffn,
-            #                                 batch_norm=g_bn))
             elif args.model == 'gps_attention':
                 self.layers.append(GPSLayer(hid_dim=hidden_dim, 
                                             local_gnn_type=local_gnn_type,
@@ -230,32 +215,13 @@ class GraphHead(nn.Module):
 
 
     def forward(self, batch):
-        # print(f"batch.y unique values: {batch.y}")
-        # print(f"batch.y[:, 0] unique: {batch.y[:, 0]}")
-        # print(f"batch.y[:, 1] unique: {batch.y[:, 1]}")
-        
-        # # 检查节点类型分布
-        # print(f"batch.node_type unique: {batch.node_type}")
-        # print(f"node_type distribution: {batch.node_type}")
-        
-        # # 如果你怀疑是采样问题，可以检查原始图中的标签分布
-        # print(f"batch.n_id range: min={batch.n_id.min()}, max={batch.n_id.max()}")
-        # # 检查是否所有batch都是这样
-        # print(f"Current batch info: batch_size={getattr(batch, 'batch_size', 'unknown')}")
-        # print(f"batch.y:{torch.unique(batch.y)}")
-        # assert 0
-        ## Node type / Edge type encoding
         x = self.node_encoder(batch.node_type)
-        xe = self.edge_encoder(batch.edge_type)
-        # print("x", x.size()) #([30672, 72])
-        # print("edge_attr",xe.size()) #([61880, 144])
-        # assert 0
+        xe = self.edge_encoder(batch.edge_type.long())
+        
         ## Contrastive learning encoder
         if self.use_cl:
             xcl = self.cl_linear(batch.x)
-            ## concatenate node embeddings and embeddings learned by SGRL
             x = torch.cat((x, xcl), dim=1)
-
         
         ## If we use circuit statistics encoder
         if self.use_stats:
@@ -281,17 +247,10 @@ class GraphHead(nn.Module):
         if self.model == 'gps_attention':
             batch.x = x
             batch.edge_attr = xe
-            # print("x", x.size()) #([30672, 72]) 
-            # print("edge_attr",batch.edge_attr.size()) #([61880, 144])
-            # assert 0
             for layer in self.layers:
-                #batch.batch:Data(edge_index=[2, 17734], x=[11919, 144], y=[11919, 2], node_type=[11919], edge_type=[17734], name='ssram', node_attr=[11919, 17], tar_edge_dist=[3], n_id=[11919], e_id=[17734], num_sampled_nodes=[5], num_sampled_edges=[4], input_id=[128], batch_size=128, edge_attr=[17734, 144])
-                # print(f"batch:{batch}") 
-                # assert 0
                 batch = layer(batch)  # GPSLayer 接收整个 batch
             x = batch.x  # 最后提取节点特征
         else:
-            # x = x.float()
 
             for conv in self.layers:
                 if self.model == 'gine' or self.model == 'resgatedgcn' :
@@ -302,9 +261,6 @@ class GraphHead(nn.Module):
                     batch = conv(batch)
                     x = batch.x
                 else:
-                    # print(f"x:{x.shape}") #[28650, 1]
-                    # print(f"edge_index:{batch.edge_index.shape}") #([2, 57994])
-                    # assert 0
                     x = conv(x, batch.edge_index)
 
                 if self.use_bn:
@@ -350,8 +306,8 @@ class GraphHead(nn.Module):
             true_label = batch.edge_label
         
         else:
-            raise ValueError('Invalid task level')
-            
+            raise ValueError('Invalid task level')  
+
         return pred,true_class,true_label
         
         
